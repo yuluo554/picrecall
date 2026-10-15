@@ -1,0 +1,33 @@
+# Python 标准模板
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+venv/
+.venv/
+env/
+
+# 环境与密钥
+.env
+.env.*
+
+# 本项目：索引库与模型缓存（隐私红线，绝不入库）
+*.db
+*.sqlite
+*.sqlite3
+models/
+model_cache/
+.cache/
+
+# 产物与私有留档
+_private/
+release/
+*.log
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
