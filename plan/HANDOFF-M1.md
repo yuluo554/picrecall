@@ -78,6 +78,11 @@
 9. **`.probe/`、`smoke/` 已 gitignore**：本机一次性探测产物别入库。
 10. **Pillow 版本差异**：3.8 是 10.4.0、3.12 是 12.3.0；`draw.textlength` 在 10.x 可用，
     老版本回落 `textsize`（`bench._text_width` 已双通道）。
+11. **⚠️ 已知缺口（M0 未解，M5 交付期须处理）**：`bench._default_data_dir()` 按 `__file__`
+    相对路径推导数据目录，**只在 `pip install -e`（源码/可编辑安装）下成立**；
+    若将来做非可编辑安装或打包，该默认值会指到 site-packages 外部而落空。
+    当前无影响（README 与 CI 都显式传 `--data`），但 M5 做干净环境/打包验证时必须复核——
+    处置方向：数据目录改为随包资源（`importlib.resources`）或要求 `--data` 显式传入。
 
 ## 五、DoD 逐项 checklist（M1 出口判据）
 
