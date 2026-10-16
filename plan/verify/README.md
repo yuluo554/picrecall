@@ -54,13 +54,26 @@
 
 ### 四、守门变异验证（"弄坏被测行为 → 门必须变红"）
 
+**M0 变异（复跑仍有效）**：
+
 | 变异 | 期望 | 实测 |
 |---|---|---|
-| README 加假旗标 `--bogus-flag` | README↔CLI 门红 | ✅ `test_readme_flags_exist_somewhere_in_cli` FAILED |
+| README 加假旗标 `--bogus-flag` | README↔CLI 门红 | ✅ FAILED |
 | 破坏 `segment()`（CJK 不再逐字切） | 分词测试红 | ✅ 3 项 FAILED |
 | `dedupe` 注入**真实执行**的 `os.remove`（字面） | 只读门红 | ✅ FAILED |
-| `dedupe` 注入 `import os as _o; _o.remove(...)`（别名规避） | AST 门仍红 | ✅ FAILED（**首版子串扫描门被别名绕过 = 假门，已改为 AST + import 别名解析**） |
+| `dedupe` 注入 `import os as _o; _o.remove(...)`（别名规避） | AST 门仍红 | ✅ FAILED（首版子串扫描门被别名绕过 = 假门，已改 AST + 别名解析） |
 | 篡改合成图字节 | `gen --check` 红 | ✅ FAILED |
+
+**M1 变异（本轮新注入，逐项实测）**：
+
+| 变异（改被测行为） | 期望 | 实测 |
+|---|---|---|
+| **K16**：把"连续若干条拼接"改成"只单条"（`for j in range(i, i+1)`） | 跨框口径测试红 | ✅ `test_contiguous_run_detects_line_split_across_boxes` FAILED |
+| **K17**：磁盘字节不一致时**用像素一致放行**（`continue` 代替判红） | 篡改门红 | ✅ `test_check_turns_red_when_image_bytes_appended` FAILED（**证明"像素放行"确会毁掉守门**） |
+| **K18**：去掉 libsimple 词典前置校验（`miss = []`） | 词典缺失门红 | ✅ `test_simple_profile_missing_dict_is_explicit` FAILED |
+| **K19**：台账 `--check` 恒返回 0 | 台账门红 | ✅ `test_ledger_check_turns_red_on_manual_edit` + `..._when_asset_changes` 2 项 FAILED |
+
+> 每项变异均**先注入 → 复跑 → 复原 → 复跑**；复原后全绿，工作区干净（`git status` 空）。
 
 ### 五、不可本机实跑的通路（显式标注）
 
