@@ -82,15 +82,25 @@ picrecall bench run --data data/synthetic    # 真值对账：OCR 识别率 + �
 
 默认走 `char` 兜底路径（CJK 逐字切分 + unicode61），**无条件可用**。
 若想用词级切分的 `simple` 主路径，需自备 [wangfenjin/simple](https://github.com/wangfenjin/simple)
-的预编译动态库（Release 提供 `libsimple-windows-x64.zip` / `linux-ubuntu-latest.zip` 等），
-放到项目根或设置环境变量：
+的预编译件（Release 提供 `libsimple-windows-x64.zip` / `linux-ubuntu-latest.zip` 等，
+解压后得到 `simple.dll` 与 `dict/` 词典目录），指向二者：
 
 ```bash
-export PICRECALL_SIMPLE_LIB=/path/to/libsimple.dll
+export PICRECALL_SIMPLE_LIB=/path/to/simple.dll
+export PICRECALL_SIMPLE_DICT=/path/to/dict        # 缺省则取 DLL 同级的 dict/
 picrecall index "/path/to/screenshots" --profile simple
 ```
 
-主路径不可用时程序会**显式报告"未启用"**，检索自动走兜底路径，不会静默出错。
+> **实测说明（M1）**：`libsimple-windows-x64.zip` 在 3.8 / 3.12 双通道均已实测加载成功，
+> 词级切分可用（如 `本月账单已生成` → `本月 账单 已 生成`）。注意主路径**更严**：
+> 跨词边界的截断查询（如把"优惠券抵扣"截成"优惠券抵"）在词级路径不命中、在逐字路径命中。
+> **实测代价**：在合成集基准上，词级路径检索命中率 **0.8438**（未达 0.90 门槛），
+> 逐字兜底路径 **0.9375**（达标）——词级精度更高但召回更低。
+> 故**默认走 `char`**；`simple` 属可选主路径，按需自担取舍。
+> 索引库记录所用 profile，查询时不一致会报错并提示重建（exit 2）。
+
+主路径不可用时（DLL 缺席或词典不全）程序会**显式报告"未启用 + 原因"**，
+检索自动走 `char` 兜底，不会静默出错。
 
 ## 退出码语义
 

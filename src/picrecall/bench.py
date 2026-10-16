@@ -22,10 +22,14 @@ MANIFEST_SCHEMA = "picrecall-bench/1"
 
 # ── 口径锚定（plan/05 §四，唯一实现处，文档只引用）──
 # OCR 识别率口径：以"合成图上应识别出的文本行是否被检出"计。
-#   "被检出" = 该行归一化字符序列 **包含于** OCR 输出行之一（归一化后），
-#             且该输出行置信度 >= config.OCR_CONF_MIN。
-#   已知取舍：以"包含"而非"逐字相等"，因 OCR 对中文标点/空格常有不稳定差异，
-#             该取舍使识别率口径偏宽松（README 与报告显式声明）。
+#   "被检出" = 该行归一化字符序列 **包含于** OCR 输出行的**连续若干条拼接串**（归一化后），
+#             且参与拼接的输出行置信度均 >= config.OCR_CONF_MIN。
+#   为何是"连续若干条"而非"单条"（M1 实测修正）：OCR 会把**同一条渲染行**切成多个检测框
+#             （实测 img_0010：`config error: timeout 3000` → `config` + `error:timeout3000`），
+#             若只认"含于单条"，正确识别会被误判为未检出（60 图集实测 0.8909 → 0.9545）。
+#   已知取舍：以"包含"而非"逐字相等"，因 OCR 对中文标点/空格常有不稳定差异；
+#             该取舍使识别率口径偏宽松，故**同时另记严格单条命中数**（strict_line_hits）
+#             供交叉核验，README 与报告显式声明。
 # 检索命中率口径：query 的返回图片集合 **包含** manifest 中声明该 query 的图片集合（召回优先）；
 #   同时另记精确率（返回集中非真值图片数），如实报告不掩盖误召回。
 
@@ -145,6 +149,7 @@ def gen_synthetic(out_dir, data_dir=None, seed=None, count=None, quiet=False):
                 "queries": _derive_queries(chosen),
                 "layout": layout_meta,
                 "sha256": _sha256(path),
+                "pixel_sha256": _pixel_sha256(path),
             }
         )
 
@@ -247,6 +252,23 @@ def _sha256(path):
     return h.hexdigest()
 
 
+def _pixel_sha256(path):
+    """可移植内容指纹：对**解码后的原始像素字节**取 sha256。
+
+    为什么要它（M1 实测发现）：PNG 文件字节依赖编码器版本——同一张图在
+    Pillow 10.4.0 与 12.3.0 下 IDAT 压缩流不同（实测像素 0 差异、文件 sha256 不同）。
+    故文件 sha256 只在"生成它的那套环境"里可比；`pixel_sha256` 跨环境稳定，
+    用于把"内容真值"钉住，并在文件字节不一致时区分"编码器差异"与"内容真的漂移"。
+    """
+    from PIL import Image
+
+    with Image.open(path) as im:
+        raw = im.convert("RGB").tobytes()
+    import hashlib
+
+    return hashlib.sha256(raw).hexdigest()
+
+
 def _pkg_version():
     from . import __version__
 
@@ -256,6 +278,26 @@ def _pkg_version():
 def _normalize(s):
     """归一化：去所有空白（OCR 对空格常不稳定，见口径取舍声明）。"""
     return "".join(s.split())
+
+
+def _contained_in_contiguous_run(needle, texts):
+    """needle 是否含于 texts 中**连续若干条**的拼接串（O(n^2)，n 很小）。
+
+    OCR 会把同一条渲染行切成多个相邻检测框，故判定须允许跨相邻框拼接；
+    但只允许**连续**拼接（不是任意子集），以免把图上相距很远的词误拼成假命中。
+    """
+    if not needle:
+        return False
+    n = len(texts)
+    for i in range(n):
+        acc = ""
+        for j in range(i, n):
+            acc += texts[j]
+            if needle in acc:
+                return True
+            if len(acc) > len(needle) * 4 + 64:
+                break  # 拼接已远超目标长度，再拼无意义（保性能）
+    return False
 
 
 def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=False):
@@ -284,6 +326,7 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
     images = manifest["images"]
 
     total_lines = detected_lines = 0
+    strict_hits = 0
     line_details = []
     for item in images:
         fname = item["file"]
@@ -298,19 +341,27 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
         if inject_defect == "ocr_drop":
             observed_lines = observed_lines[: max(0, len(observed_lines) // 2)]
 
+        # 只保留达阈值的输出行参与判定（置信度是口径的一部分）
+        good = [o for o in observed_lines if float(o["conf"]) >= config.OCR_CONF_MIN]
+        texts = [_normalize(o["text"]) for o in good]
+        texts = [t for t in texts if t]
+
         for expected in item["lines"]:
             total_lines += 1
             ne = _normalize(expected)
-            hit = any(
-                _normalize(o["text"]) and ne in _normalize(o["text"])
-                and float(o["conf"]) >= config.OCR_CONF_MIN
-                for o in observed_lines
-            )
+            # 严格口径：含于**单条**输出行
+            strict = any(ne in t for t in texts)
+            # 主口径：含于**连续若干条**输出行的拼接串（OCR 会把一条渲染行切成多个框）
+            hit = strict or _contained_in_contiguous_run(ne, texts)
+            if strict:
+                strict_hits += 1
             if hit:
                 detected_lines += 1
-            line_details.append({"file": fname, "expected": expected, "detected": hit})
+            line_details.append({"file": fname, "expected": expected, "detected": hit,
+                                 "strict": strict})
 
     ocr_recall = (detected_lines / total_lines) if total_lines else 0.0
+    ocr_recall_strict = (strict_hits / total_lines) if total_lines else 0.0
 
     # 逐 query：检索召回
     query_details = []
@@ -341,7 +392,10 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
     return {
         "thresholds": thr,
         "ocr": {"total_lines": total_lines, "detected_lines": detected_lines,
-                "recall": round(ocr_recall, 6), "details": line_details},
+                "recall": round(ocr_recall, 6),
+                "recall_strict_single_line": round(ocr_recall_strict, 6),
+                "strict_line_hits": strict_hits,
+                "details": line_details},
         "search": {"total_queries": total_q, "recalled_queries": hit_q,
                    "recall": round(query_recall, 6), "false_positives": false_positives,
                    "details": query_details},
@@ -358,9 +412,20 @@ def _find_path_for(path_to_id, fname):
 
 
 def check_generated(out_dir, data_dir=None, seed=None, count=None):
-    """`gen --check`：重新生成到临时目录，与既有 manifest 逐字节比对。
+    """`gen --check`：重新生成到临时目录，与既有 manifest 比对。
 
-    图片本体按 manifest 登记的 sha256 比对（图片不入 git，位级一致以 sha256 为锚）。
+    两层判据（M1 实测校准，见 plan/verify §M1）：
+
+    ① **完整性（严格，篡改必红）**：磁盘上的每张图，其文件 sha256 必须与 manifest
+       登记值一致。任何字节改动（含在 IEND 之后追加字节）→ 红。
+       注意：不能用"解码像素一致"来放过字节不一致——尾部追加字节**不改像素**，
+       若用像素判据放行，篡改就会被误判成"编码器差异"，守门即失效。
+
+    ② **可复现性（信息性，不改变 ① 的判定）**：本环境重新生成的 manifest 与既有
+       manifest 是否逐字节一致。实测：PNG 的 IDAT 压缩流依赖 Pillow 版本
+       （10.4.0 vs 12.3.0：同一张图像素 0 差异、文件字节不同），故跨环境可能报
+       "编码器字节差异"——这是**环境差异**，不是数据漂移，如实标注并给出
+       `pixel_sha256`（跨环境稳定的像素指纹）供交叉核验。
     """
     import json
     import shutil
@@ -379,20 +444,80 @@ def check_generated(out_dir, data_dir=None, seed=None, count=None):
     if count is None:
         count = old.get("image_count")
 
+    # ① 完整性：磁盘文件 vs manifest 登记（篡改必红）
+    for item in old["images"]:
+        p = os.path.join(out_dir, item["file"])
+        if not os.path.isfile(p):
+            return {"ok": False, "reason": "图片缺失: %s" % item["file"]}
+        if _sha256(p) != item["sha256"]:
+            want_px = item.get("pixel_sha256")
+            if want_px and _pixel_sha256(p) == want_px:
+                # 内容未变但字节变了：只可能是"换了编码器重写"，仍如实报红（不放过篡改）
+                return {"ok": False,
+                        "reason": "图片字节与登记值不一致（内容一致，疑似编码器差异）: %s"
+                                  % item["file"]}
+            return {"ok": False, "reason": "图片字节漂移: %s" % item["file"]}
+
     tmp = tempfile.mkdtemp(prefix="picrecall-check-")
     try:
         new_manifest = gen_synthetic(tmp, data_dir=data_dir, seed=seed, count=count, quiet=True)
         with open(new_manifest, "r", encoding="utf-8") as fh:
             new = json.load(fh)
-        if new != old:
-            return {"ok": False, "reason": "manifest 不一致（重生成漂移）"}
-        # 图片 sha256 逐一比对
-        for item in old["images"]:
-            p = os.path.join(out_dir, item["file"])
-            if not os.path.isfile(p):
-                return {"ok": False, "reason": "图片缺失: %s" % item["file"]}
-            if _sha256(p) != item["sha256"]:
-                return {"ok": False, "reason": "图片字节漂移: %s" % item["file"]}
+
+        # ②a 真值面（输入与期望）必须一致——真漂移在这里先现形
+        old_truth = _truth_view(old)
+        new_truth = _truth_view(new)
+        if old_truth != new_truth:
+            return {"ok": False, "reason": "manifest 真值不一致（重生成漂移）",
+                    "diff": _first_diff(old_truth, new_truth)}
+
+        # ②b 内容面：像素指纹（跨环境稳定）必须一致——内容真的变了就红
+        for o_item, n_item in zip(old["images"], new["images"]):
+            want = o_item.get("pixel_sha256")
+            if want is None:
+                continue
+            if n_item.get("pixel_sha256") != want:
+                return {"ok": False,
+                        "reason": "图片内容漂移（像素指纹不一致）: %s" % o_item["file"]}
+
+        # ②c 字节面：本环境能否逐字节复现既有 manifest（环境差异信息，不改变 ① 判定）
+        encoder_mismatch = [
+            o["file"] for o, n in zip(old["images"], new["images"])
+            if o.get("sha256") != n.get("sha256")
+        ]
+        if encoder_mismatch:
+            return {"ok": True, "images": len(old["images"]),
+                    "note": "本环境编码器字节差异 %d 张（像素指纹一致，非漂移）"
+                            % len(encoder_mismatch),
+                    "encoder_mismatch": sorted(encoder_mismatch)}
         return {"ok": True, "images": len(old["images"])}
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _truth_view(manifest):
+    """真值视图：剔除环境相关的字节指纹，只留输入与期望（用于漂移判定）。"""
+    return {
+        "schema": manifest.get("schema"),
+        "seed": manifest.get("seed"),
+        "generator": manifest.get("generator"),
+        "generator_version": manifest.get("generator_version"),
+        "image_count": manifest.get("image_count"),
+        "thresholds": manifest.get("thresholds"),
+        "images": [
+            {"file": i["file"], "lines": i["lines"], "queries": i["queries"], "layout": i["layout"]}
+            for i in manifest.get("images", [])
+        ],
+    }
+
+
+def _first_diff(a, b):
+    """给出第一处真值差异的可读定位（便于排障，不改变判定）。"""
+    if a.get("image_count") != b.get("image_count"):
+        return "image_count: %s vs %s" % (a.get("image_count"), b.get("image_count"))
+    if a.get("seed") != b.get("seed"):
+        return "seed: %s vs %s" % (a.get("seed"), b.get("seed"))
+    for x, y in zip(a.get("images", []), b.get("images", [])):
+        if x != y:
+            return "图片 %s 真值不同" % x.get("file")
+    return "未定位到具体差异"

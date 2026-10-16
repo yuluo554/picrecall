@@ -1,0 +1,2 @@
+# 合成截图集占位：图片本体不入 git（见 .gitignore 与 data/README §四）。
+# 重建：python -m picrecall bench gen --data data --out data/synthetic

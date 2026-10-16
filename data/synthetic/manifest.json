@@ -1,0 +1,1196 @@
+{
+  "generator": "picrecall.bench",
+  "generator_version": "0.1.0",
+  "image_count": 60,
+  "images": [
+    {
+      "file": "img_0001.png",
+      "layout": {
+        "font_size": 24,
+        "height": 136,
+        "kind": "bubble_right",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "本月账单已生成",
+        "显示行号"
+      ],
+      "pixel_sha256": "01d5257202880b9acb1405eb789557511588cafcdb4784ed530500f5d00944c7",
+      "queries": [
+        "本月账单",
+        "显示行号"
+      ],
+      "sha256": "56d13fe5d965b7374f633cdd9a3bb8ab18a257537c6127effc6346ca47bd2de7"
+    },
+    {
+      "file": "img_0002.png",
+      "layout": {
+        "font_size": 34,
+        "height": 176,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "今晚八点老地方见",
+        "清除缓存并重启"
+      ],
+      "pixel_sha256": "fe4ea1ec35ac15ce2e9491ba07c10eb26f6983e17eb96df0599ff6cdeeb36f4e",
+      "queries": [
+        "今晚八点",
+        "清除缓存"
+      ],
+      "sha256": "3239459ad70971f3f69763587ef15f933453a745450a2722d67eb060853c7a57"
+    },
+    {
+      "file": "img_0003.png",
+      "layout": {
+        "font_size": 28,
+        "height": 144,
+        "kind": "bubble_right",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "订单金额 128.00 元",
+        "这个方案我再改一版"
+      ],
+      "pixel_sha256": "0d8ecb95f426016f28e3b576009b7bc3c80265b7662a3d9435e2ec77d1fbf057",
+      "queries": [
+        "订单金额",
+        "这个方案"
+      ],
+      "sha256": "a11eeefbf6628e539462e4a6797981821bc6f19af2587d722f3a0edb61fb9acb"
+    },
+    {
+      "file": "img_0004.png",
+      "layout": {
+        "font_size": 28,
+        "height": 144,
+        "kind": "list",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "字体大小 14",
+        "余额不足请及时充值"
+      ],
+      "pixel_sha256": "91111720397ef8b7f9083dd30c56a99971bb2ceac7e3672aecf349379780d951",
+      "queries": [
+        "字体大小",
+        "余额不足"
+      ],
+      "sha256": "5206d08c1986dfc4a52f46258a0d8a0ae5883c7ea77fb635840a92a8e7c1f6b8"
+    },
+    {
+      "file": "img_0005.png",
+      "layout": {
+        "font_size": 34,
+        "height": 156,
+        "kind": "bubble_left",
+        "line_count": 2,
+        "width": 1068
+      },
+      "lines": [
+        "ModuleNotFoundError: No module named 'requests'",
+        "Connection refused by server"
+      ],
+      "pixel_sha256": "780c516232c78e7d11b962efd62f70d031a9bb8d509c3d252e4ac9d3f0159757",
+      "queries": [
+        "ModuleNotFoundError",
+        "Connection"
+      ],
+      "sha256": "a94fe4216fee3e38c525026256304454ae80b9b0b17048461109ea9032fe5297"
+    },
+    {
+      "file": "img_0006.png",
+      "layout": {
+        "font_size": 24,
+        "height": 98,
+        "kind": "bubble_left",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "导出为 PDF"
+      ],
+      "pixel_sha256": "092bbff03dd047fe073306b1039fb6e98e32a957ac5f542d0bfd12cfef4f52dd",
+      "queries": [
+        "导出为",
+        "PDF"
+      ],
+      "sha256": "906b77dcaffe43428404ffdf9980a6847d0e5d01c71400dcdf1cf0533f1e89a1"
+    },
+    {
+      "file": "img_0007.png",
+      "layout": {
+        "font_size": 28,
+        "height": 164,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "自动保存 每 5 分钟",
+        "failed to bind port 8080"
+      ],
+      "pixel_sha256": "8bede1232f9a2d006bbb7df26eac1c404ea1e01f10b513e3f487c4bcd75289d0",
+      "queries": [
+        "自动保存",
+        "failed"
+      ],
+      "sha256": "60e8f3aa4af450ab5aa38c3aa1aeaf7ff3ddfb60a1c4ab25f6439d30aed10c6f"
+    },
+    {
+      "file": "img_0008.png",
+      "layout": {
+        "font_size": 20,
+        "height": 94,
+        "kind": "bubble_left",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "订单号 19900000001"
+      ],
+      "pixel_sha256": "f558e9cc006b42afe90052c3d7794114d984f0fc9e0fa46e7dc54a700840adae",
+      "queries": [
+        "订单号"
+      ],
+      "sha256": "daf1916ef94025ddb03715a4a9fcadeecbd2c08f8f3c791bdbddb52c95e4ed91"
+    },
+    {
+      "file": "img_0009.png",
+      "layout": {
+        "font_size": 20,
+        "height": 114,
+        "kind": "titlebar",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "会议改到下午三点"
+      ],
+      "pixel_sha256": "17e26c4c80112e4d1f26a77e1b36f95286f1fbae85c041f468513e96aa5edc9b",
+      "queries": [
+        "会议改到"
+      ],
+      "sha256": "8f77715f3baca5d98673a74956e89ed3bcc20e7e930927b86a348c6c6992818a"
+    },
+    {
+      "file": "img_0010.png",
+      "layout": {
+        "font_size": 20,
+        "height": 162,
+        "kind": "bubble_right",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "这个方案我再改一版",
+        "config error: timeout 3000",
+        "自动保存 每 5 分钟"
+      ],
+      "pixel_sha256": "7a132781b3b128cdd262ebf07db64b95f9488834c0e80f4c2be248cac67b404c",
+      "queries": [
+        "这个方案",
+        "config",
+        "自动保存"
+      ],
+      "sha256": "41d65a4eca4234afbaaa8ca88c9c261bf0b5c0e2289bb0fcc54dc94a3173d6dc"
+    },
+    {
+      "file": "img_0011.png",
+      "layout": {
+        "font_size": 34,
+        "height": 156,
+        "kind": "bubble_right",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "已支付 3000 元整",
+        "优惠券抵扣 15 元"
+      ],
+      "pixel_sha256": "fe9ff7d5b2d4739b568e313a9ed534fe8debc236269f6939d36a1684acd261fd",
+      "queries": [
+        "已支付",
+        "优惠券抵"
+      ],
+      "sha256": "b7f5461a9124ed222f97ed0bb80f5d80c883722dc45b4c5f971de00dbf154465"
+    },
+    {
+      "file": "img_0012.png",
+      "layout": {
+        "font_size": 34,
+        "height": 204,
+        "kind": "list",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "设置 通用 高级选项",
+        "有效期至 2027 年 3 月",
+        "这个方案我再改一版"
+      ],
+      "pixel_sha256": "b30e46634903e3df563c03986c35427cb3197e287583eb0d16a565533573b8a9",
+      "queries": [
+        "高级选项",
+        "有效期至",
+        "这个方案"
+      ],
+      "sha256": "c4d7c26f28407ce9603f479f2fd439306e355d2bca83cf19929d6a24e24d0ca4"
+    },
+    {
+      "file": "img_0013.png",
+      "layout": {
+        "font_size": 24,
+        "height": 98,
+        "kind": "plain",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "设置 通用 高级选项"
+      ],
+      "pixel_sha256": "9cb75c25c1e7306a65899c6eec6e777fc42f3a5aee32a253f05a2b4b36ac853d",
+      "queries": [
+        "高级选项"
+      ],
+      "sha256": "b1fff4f1466f335ec68f17700217ca2578cebc85ccd474b9bd0608ede59302b5"
+    },
+    {
+      "file": "img_0014.png",
+      "layout": {
+        "font_size": 24,
+        "height": 98,
+        "kind": "bubble_right",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "工单 19900000002 已受理"
+      ],
+      "pixel_sha256": "adacc86f5d3fae2ed852e2d911d1af02667075322e27857cd186c6539f3fe107",
+      "queries": [
+        "已受理"
+      ],
+      "sha256": "be19d89467edac82dbc00e23724337e1823cc1abd2afa3d890fd81d50e72e5fb"
+    },
+    {
+      "file": "img_0015.png",
+      "layout": {
+        "font_size": 20,
+        "height": 114,
+        "kind": "titlebar",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "已支付 3000 元整"
+      ],
+      "pixel_sha256": "3736fdaf514693771c7609e3bec829efa0da0d00541eb671fe79c1da391c0a19",
+      "queries": [
+        "已支付"
+      ],
+      "sha256": "103b34dcabf371502a5404146af1854f94c59c4b4f91f30a1be888e960634330"
+    },
+    {
+      "file": "img_0016.png",
+      "layout": {
+        "font_size": 24,
+        "height": 194,
+        "kind": "titlebar",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "转账成功 尾号 6688",
+        "自动保存 每 5 分钟",
+        "好的没问题"
+      ],
+      "pixel_sha256": "5a2442653c490a14850da6b87176091fc7d2f7844b28c55b62920d333f9741a5",
+      "queries": [
+        "转账成功",
+        "自动保存",
+        "好的没问"
+      ],
+      "sha256": "dbb036cd1816ca6df1743cdd3061d477214bc1cfa4209974998ecad51b0680be"
+    },
+    {
+      "file": "img_0017.png",
+      "layout": {
+        "font_size": 20,
+        "height": 162,
+        "kind": "list",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "自动保存 每 5 分钟",
+        "好的没问题",
+        "订单号 19900000001"
+      ],
+      "pixel_sha256": "16b9c01cb776959b1c4c3246bd72e8edd0801f3d4a43df714d26ce67bcab2cda",
+      "queries": [
+        "自动保存",
+        "好的没问",
+        "订单号"
+      ],
+      "sha256": "5b24cc29dcd190d497ad5052e3b90a54d6b29a1d2dcd5d558f16dc314e0f0308"
+    },
+    {
+      "file": "img_0018.png",
+      "layout": {
+        "font_size": 28,
+        "height": 186,
+        "kind": "bubble_left",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "订单号 19900000001",
+        "导出为 PDF",
+        "启用深色模式"
+      ],
+      "pixel_sha256": "257b432e85692690b91694dad33b7e0562eb6faa1e5c455a7c6a171e09a41abe",
+      "queries": [
+        "订单号",
+        "导出为",
+        "PDF",
+        "启用深色"
+      ],
+      "sha256": "e89fbfe74f1a579ba47709b28a0a1a3b89c503145eb24966f99b89a639a066ed"
+    },
+    {
+      "file": "img_0019.png",
+      "layout": {
+        "font_size": 20,
+        "height": 94,
+        "kind": "list",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "今晚八点老地方见"
+      ],
+      "pixel_sha256": "f2c6fc2ce424062aca1508bb789a7352e4a2bb8201df27bc8dd6ad16ad06f868",
+      "queries": [
+        "今晚八点"
+      ],
+      "sha256": "db31a99bb962050a650b19e934db33a69416747ebb03ff38f965c1b86dab1f2b"
+    },
+    {
+      "file": "img_0020.png",
+      "layout": {
+        "font_size": 28,
+        "height": 102,
+        "kind": "list",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "工单 19900000002 已受理"
+      ],
+      "pixel_sha256": "306d306567a7c887530740937581b1b2348847a0374daf3b8e351deb14660cd6",
+      "queries": [
+        "已受理"
+      ],
+      "sha256": "8c2e5e416a606372f536a9522a3f284239baaac480f0ec1b6d9fe2d0f0d8034b"
+    },
+    {
+      "file": "img_0021.png",
+      "layout": {
+        "font_size": 20,
+        "height": 94,
+        "kind": "bubble_right",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "清除缓存并重启"
+      ],
+      "pixel_sha256": "9f6473d66148915bbacbd43c01c4eebdc87b90646390769b9d09dd44d24360f6",
+      "queries": [
+        "清除缓存"
+      ],
+      "sha256": "d0a3e18eb10bf20ea034bb7fa770cf035e560c336124bf9351bd7d0864386726"
+    },
+    {
+      "file": "img_0022.png",
+      "layout": {
+        "font_size": 34,
+        "height": 156,
+        "kind": "list",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "本月账单已生成",
+        "今晚八点老地方见"
+      ],
+      "pixel_sha256": "df67f9c7b1c2fb1694817fb374786be93ae4925d73c3149a337030fbc3e33744",
+      "queries": [
+        "本月账单",
+        "今晚八点"
+      ],
+      "sha256": "ed71d5a379653b40862c33bef055c68142f1ef37655d11b47ec49dcd207f650e"
+    },
+    {
+      "file": "img_0023.png",
+      "layout": {
+        "font_size": 34,
+        "height": 204,
+        "kind": "bubble_left",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "今晚八点老地方见",
+        "路上堵车晚到十分钟",
+        "设置 通用 高级选项"
+      ],
+      "pixel_sha256": "5f6db83beec514098bc682b9fe531a1f1bd15292411a0dbdec42dd1d3fdd7097",
+      "queries": [
+        "今晚八点",
+        "路上堵车",
+        "高级选项"
+      ],
+      "sha256": "2bcbc96b3fe3bcc103acf28a36a9a8269dc2ccfd1e61bf515d5411f0464a76c4"
+    },
+    {
+      "file": "img_0024.png",
+      "layout": {
+        "font_size": 34,
+        "height": 156,
+        "kind": "bubble_left",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "订单金额 128.00 元",
+        "显示行号"
+      ],
+      "pixel_sha256": "157e490710396d63818d0b5a8602600830d802dd56278bb901a16952a3a85ee2",
+      "queries": [
+        "订单金额",
+        "显示行号"
+      ],
+      "sha256": "49480bd178fb2919a5cc17fc4ff7f73f177b24bca5e04b87b4ac9950a5098672"
+    },
+    {
+      "file": "img_0025.png",
+      "layout": {
+        "font_size": 28,
+        "height": 102,
+        "kind": "bubble_right",
+        "line_count": 1,
+        "width": 601
+      },
+      "lines": [
+        "Connection refused by server"
+      ],
+      "pixel_sha256": "81ca79c59705ba1fb767d1edcb9841dca4ebcff26592e5749c73da7709ecd9ff",
+      "queries": [
+        "Connection"
+      ],
+      "sha256": "18734671280e0a33a67aa7f2fdc410c349a9a00bbe9e8d0aa65e8bf40f689693"
+    },
+    {
+      "file": "img_0026.png",
+      "layout": {
+        "font_size": 28,
+        "height": 102,
+        "kind": "list",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "设置 通用 高级选项"
+      ],
+      "pixel_sha256": "88926d85a9e18f1e6b0c98c339a9a434d9dd5a0c05bfdaf728d943d3e45352f8",
+      "queries": [
+        "高级选项"
+      ],
+      "sha256": "35f09d674cf10a2bd15f3ecb37caaadcade73b2f5c2fa8cbcf1859d13f4fe3c3"
+    },
+    {
+      "file": "img_0027.png",
+      "layout": {
+        "font_size": 24,
+        "height": 156,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "本月账单已生成",
+        "工单 19900000002 已受理"
+      ],
+      "pixel_sha256": "3e5c606f2a49eaa904a6e219bc168da8788f736a2d750eb2efd29cf4c3681770",
+      "queries": [
+        "本月账单",
+        "已受理"
+      ],
+      "sha256": "45ec38b62753785147ea45c91cdc227745acb5f861120be977cbe27267a95e43"
+    },
+    {
+      "file": "img_0028.png",
+      "layout": {
+        "font_size": 34,
+        "height": 156,
+        "kind": "list",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "转账成功 尾号 6688",
+        "failed to bind port 8080"
+      ],
+      "pixel_sha256": "cd3fe79c29eb047cb8d087bf124f082d81e7b09eaafd95527f10027f6b6a5e8c",
+      "queries": [
+        "转账成功",
+        "failed"
+      ],
+      "sha256": "27f333f52c38f12cf531f00e5722f7a8e01643841b7e1144263a6744911190ca"
+    },
+    {
+      "file": "img_0029.png",
+      "layout": {
+        "font_size": 28,
+        "height": 102,
+        "kind": "bubble_left",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "路上堵车晚到十分钟"
+      ],
+      "pixel_sha256": "afe44be23000846ca6390f9b81b38975bf3136d343f6fcf7e0e385045ade0dfe",
+      "queries": [
+        "路上堵车"
+      ],
+      "sha256": "ec2adf8962e0c6f13c598543972418d137260d7b885a9997e08e1c8d6e0b0f98"
+    },
+    {
+      "file": "img_0030.png",
+      "layout": {
+        "font_size": 24,
+        "height": 98,
+        "kind": "list",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "会议改到下午三点"
+      ],
+      "pixel_sha256": "18bcfdf61f3ac00e1cb8c833c2f9887c346c221e3b6c401b34a518ad50d36c16",
+      "queries": [
+        "会议改到"
+      ],
+      "sha256": "e22cf93089f12d8e74b600e0b2667c69113d9e5358a6843d041e2f74cf1d365c"
+    },
+    {
+      "file": "img_0031.png",
+      "layout": {
+        "font_size": 20,
+        "height": 128,
+        "kind": "list",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "有效期至 2027 年 3 月",
+        "会议改到下午三点"
+      ],
+      "pixel_sha256": "4445eaba8893c05db65114ac689367a85a31eb92e6e215e576705395279445d4",
+      "queries": [
+        "有效期至",
+        "会议改到"
+      ],
+      "sha256": "56c0d7ee4313ebcecfa3d021d08bdf71f6b65a096889b0b2b928eb0d7d855109"
+    },
+    {
+      "file": "img_0032.png",
+      "layout": {
+        "font_size": 34,
+        "height": 156,
+        "kind": "list",
+        "line_count": 2,
+        "width": 908
+      },
+      "lines": [
+        "启用深色模式",
+        "ModuleNotFoundError: No module named 'requests'"
+      ],
+      "pixel_sha256": "7a6cb7220a9b352b4699df27af15501593417a4c668d8470a76a1a9882ee8f86",
+      "queries": [
+        "启用深色",
+        "ModuleNotFoundError"
+      ],
+      "sha256": "a1ba986b257566b46fad660040034b13e6595ae359f36baabe21993acacd5d73"
+    },
+    {
+      "file": "img_0033.png",
+      "layout": {
+        "font_size": 20,
+        "height": 128,
+        "kind": "bubble_left",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "config error: timeout 3000",
+        "Permission denied (publickey)"
+      ],
+      "pixel_sha256": "646307938014b1731536a1e59834cbd9a29a52fe4b9ea99e792038246415bd40",
+      "queries": [
+        "config",
+        "Permission"
+      ],
+      "sha256": "9182ffb658c7a9ddfd989243057918b72257fb5c9056d650fc7f1f5df7d5d741"
+    },
+    {
+      "file": "img_0034.png",
+      "layout": {
+        "font_size": 34,
+        "height": 156,
+        "kind": "plain",
+        "line_count": 2,
+        "width": 758
+      },
+      "lines": [
+        "工单 19900000002 已受理",
+        "traceback: IndexError list index out of range"
+      ],
+      "pixel_sha256": "91465f696a2521fe27839d5cb2daf071ddd4f5c15ea46cda43abae06c60912d1",
+      "queries": [
+        "已受理",
+        "traceback"
+      ],
+      "sha256": "f30997b4ec2b11aa856fc5299081e0b149e728679340731893b25631fee5e8d1"
+    },
+    {
+      "file": "img_0035.png",
+      "layout": {
+        "font_size": 20,
+        "height": 162,
+        "kind": "plain",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "这个方案我再改一版",
+        "优惠券抵扣 15 元",
+        "设置 通用 高级选项"
+      ],
+      "pixel_sha256": "96a5a4bae474217994d263da6b9fdcae6d6d2b1d270ea29f9062fc0b0b9088e3",
+      "queries": [
+        "这个方案",
+        "优惠券抵",
+        "高级选项"
+      ],
+      "sha256": "5091a69b421a4d767eea21d8066eb58bddeee88049ee6e11927c4236bd5cb242"
+    },
+    {
+      "file": "img_0036.png",
+      "layout": {
+        "font_size": 24,
+        "height": 98,
+        "kind": "bubble_left",
+        "line_count": 1,
+        "width": 710
+      },
+      "lines": [
+        "traceback: IndexError list index out of range"
+      ],
+      "pixel_sha256": "fbcaa0b63a698febcbaf1ac6ace8a87c3c5c81dc9fdf159e4420950305c855f0",
+      "queries": [
+        "traceback"
+      ],
+      "sha256": "c141d1310d9286dd22d58df8af836bfd72adb34a6156a8f6f35d88d657a2f98d"
+    },
+    {
+      "file": "img_0037.png",
+      "layout": {
+        "font_size": 28,
+        "height": 102,
+        "kind": "list",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "显示行号"
+      ],
+      "pixel_sha256": "78b97454fe9daba3abb7e632573614071e3d52f70eaebaf6024be0dd01af4737",
+      "queries": [
+        "显示行号"
+      ],
+      "sha256": "b0f816ad3c14c4e86b05068f4d0eea9f38636e4f150120d1e599299bf5fe278c"
+    },
+    {
+      "file": "img_0038.png",
+      "layout": {
+        "font_size": 28,
+        "height": 144,
+        "kind": "list",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "这个方案我再改一版",
+        "导出为 PDF"
+      ],
+      "pixel_sha256": "df04a8d8dfbac75ac2ea0fee478ba2b1e711cd58043536f45809be11399e51cb",
+      "queries": [
+        "这个方案",
+        "导出为",
+        "PDF"
+      ],
+      "sha256": "cf7668deadd54dab8242ad3a6ce9324044bb3676d599ceb0268435c0f4b5a640"
+    },
+    {
+      "file": "img_0039.png",
+      "layout": {
+        "font_size": 34,
+        "height": 108,
+        "kind": "bubble_left",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "字体大小 14"
+      ],
+      "pixel_sha256": "272bb2c19356c534b68af30c3b470da351c0deef81a9f2be12036c5adb86ffa6",
+      "queries": [
+        "字体大小"
+      ],
+      "sha256": "5514f63e7d933a177f94196fa0ba452bfb1ac824cddcf09eddd182fb5907d0e6"
+    },
+    {
+      "file": "img_0040.png",
+      "layout": {
+        "font_size": 24,
+        "height": 174,
+        "kind": "list",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "Connection refused by server",
+        "Permission denied (publickey)",
+        "清除缓存并重启"
+      ],
+      "pixel_sha256": "8def54785f333376173d9310c984766d9899b98b4757982ae08ac5e9d0fd5677",
+      "queries": [
+        "Connection",
+        "Permission",
+        "清除缓存"
+      ],
+      "sha256": "a2bfef93538f66cfb7df98953360f1496e2fb872924dbaf893b3ddbba3c15f18"
+    },
+    {
+      "file": "img_0041.png",
+      "layout": {
+        "font_size": 20,
+        "height": 128,
+        "kind": "bubble_right",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "invalid token at line 42",
+        "config error: timeout 3000"
+      ],
+      "pixel_sha256": "406dfcad0500fac718bf5170f9b2e871fa6f8f2404e1f23dcf12d7cd1efa9bff",
+      "queries": [
+        "invalid",
+        "config"
+      ],
+      "sha256": "665fbb6c430fd2b711c400c28626b5f4bb11e872cecbff3ce47b81c1e07d60b1"
+    },
+    {
+      "file": "img_0042.png",
+      "layout": {
+        "font_size": 28,
+        "height": 102,
+        "kind": "plain",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "disk quota exceeded"
+      ],
+      "pixel_sha256": "8009aae751a3a4c99e73fa176cb75a4d63bc6fb9a8eedb98e184a5a3215796c6",
+      "queries": [
+        "disk"
+      ],
+      "sha256": "f2ca68c61fbe703f57d4be9c3a24f0c3e39579737878642663bc52c3a996be54"
+    },
+    {
+      "file": "img_0043.png",
+      "layout": {
+        "font_size": 28,
+        "height": 122,
+        "kind": "titlebar",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "failed to bind port 8080"
+      ],
+      "pixel_sha256": "c3b26121589d91e500862c15176627e0bf5243e11eef4703404ae1e1d477f104",
+      "queries": [
+        "failed"
+      ],
+      "sha256": "72a2cf5d606366a96412944f203d4c1a0c865fc546972cf1f6c6ac4433ed5b76"
+    },
+    {
+      "file": "img_0044.png",
+      "layout": {
+        "font_size": 28,
+        "height": 186,
+        "kind": "plain",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "清除缓存并重启",
+        "记得带充电器",
+        "invalid token at line 42"
+      ],
+      "pixel_sha256": "1e7f7103a42f4591c3938e15ce6816327b33a9dfd141bdde13b465387df4974e",
+      "queries": [
+        "清除缓存",
+        "记得带充",
+        "invalid"
+      ],
+      "sha256": "e2bfef7688323ff11dd5e132ee3141f62060c9cbe361c49e63e3dbc1390d6954"
+    },
+    {
+      "file": "img_0045.png",
+      "layout": {
+        "font_size": 20,
+        "height": 94,
+        "kind": "plain",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "受理编号 A20261016001"
+      ],
+      "pixel_sha256": "227db06cfc6dbe20cf71555a06e4c384e7fc4ca02060e93dde37f6fbf71cccfd",
+      "queries": [
+        "受理编号"
+      ],
+      "sha256": "c6c6e0bb9ba02a0143584074495241bc14af5ce41be9b13e91890108e5e8bfd2"
+    },
+    {
+      "file": "img_0046.png",
+      "layout": {
+        "font_size": 28,
+        "height": 102,
+        "kind": "bubble_right",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "订单号 19900000001"
+      ],
+      "pixel_sha256": "85764bb0433d7fe5750d030f9930bf650421e0ed7ba6a59b7accb4380f1b78d1",
+      "queries": [
+        "订单号"
+      ],
+      "sha256": "1f550622884615eb57a4e8919b9d0e1a27554cbe3696565eea51b6959a088242"
+    },
+    {
+      "file": "img_0047.png",
+      "layout": {
+        "font_size": 20,
+        "height": 162,
+        "kind": "bubble_left",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "优惠券抵扣 15 元",
+        "余额不足请及时充值",
+        "已支付 3000 元整"
+      ],
+      "pixel_sha256": "df1bf8472baf156de9554fb7d7b3f3c4f799000d34ad90a86065e7909552e71d",
+      "queries": [
+        "优惠券抵",
+        "余额不足",
+        "已支付"
+      ],
+      "sha256": "819064295598c42e1d73143bff077987d96fc8993f5d25fc62a0a8bebdbafe16"
+    },
+    {
+      "file": "img_0048.png",
+      "layout": {
+        "font_size": 28,
+        "height": 164,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "受理编号 A20261016001",
+        "转账成功 尾号 6688"
+      ],
+      "pixel_sha256": "48ab2f3c38326a686c146861a222aba50929d4c7486419e05abff008d2a68394",
+      "queries": [
+        "受理编号",
+        "转账成功"
+      ],
+      "sha256": "801b385fe9a9119c4fbc04b1a40705835192251b1c22ef9dc8f7bce4f81791b8"
+    },
+    {
+      "file": "img_0049.png",
+      "layout": {
+        "font_size": 20,
+        "height": 94,
+        "kind": "plain",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "字体大小 14"
+      ],
+      "pixel_sha256": "f42442ff1c30e062fc8595c4e2bd9d1de0f4096833849e2051c2366db5588821",
+      "queries": [
+        "字体大小"
+      ],
+      "sha256": "2e2b93d99a120d02c33b281cd7cb85e21035c37a7e09880e06eeeb1ad750d4c3"
+    },
+    {
+      "file": "img_0050.png",
+      "layout": {
+        "font_size": 24,
+        "height": 136,
+        "kind": "bubble_left",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "余额不足请及时充值",
+        "转账成功 尾号 6688"
+      ],
+      "pixel_sha256": "d9df921c6848230b081d86493ed6bc67fb5797cb7c16c65ca7786d0006713c3a",
+      "queries": [
+        "余额不足",
+        "转账成功"
+      ],
+      "sha256": "9b33ab3a562cf273777e0a668ad76f844427ef77412468337223f559e664e886"
+    },
+    {
+      "file": "img_0051.png",
+      "layout": {
+        "font_size": 24,
+        "height": 174,
+        "kind": "plain",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "字体大小 14",
+        "Connection refused by server",
+        "好的没问题"
+      ],
+      "pixel_sha256": "1020b77d3ed8809e90836bb421aae45b38dfbac0d1b98b5815b71c7212a8f2c4",
+      "queries": [
+        "字体大小",
+        "Connection",
+        "好的没问"
+      ],
+      "sha256": "1eed493c2df834cff9283a08bfbe12e61ab0b80cffa5e97f058b6b1047b01e2c"
+    },
+    {
+      "file": "img_0052.png",
+      "layout": {
+        "font_size": 20,
+        "height": 128,
+        "kind": "bubble_left",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "有效期至 2027 年 3 月",
+        "转账成功 尾号 6688"
+      ],
+      "pixel_sha256": "86cdb2eb72cc95b6254d8840383d5272b8847b7180b43aaf61bbf955b2aa2099",
+      "queries": [
+        "有效期至",
+        "转账成功"
+      ],
+      "sha256": "73d34053fa003a7239274bf9016eca4a820632991d74aa17babeca008117fe9c"
+    },
+    {
+      "file": "img_0053.png",
+      "layout": {
+        "font_size": 28,
+        "height": 164,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "余额不足请及时充值",
+        "工单 19900000002 已受理"
+      ],
+      "pixel_sha256": "ec5f7a87fe009bfc0b0baa44ced1f8137015ae6e76478d67392941152e938651",
+      "queries": [
+        "余额不足",
+        "已受理"
+      ],
+      "sha256": "4ceaec519cde3d65cfe27edfa0dc2f8b94c719d622d9c43e0905acfad1763eed"
+    },
+    {
+      "file": "img_0054.png",
+      "layout": {
+        "font_size": 20,
+        "height": 94,
+        "kind": "bubble_right",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "有效期至 2027 年 3 月"
+      ],
+      "pixel_sha256": "957a863d3ed7396bf926a32af0874ea534bbadbfc0a7fb611d7e888f96407426",
+      "queries": [
+        "有效期至"
+      ],
+      "sha256": "c2f8dcce3d05b2cd8593dbc24029669213c43f4e61e87e24d143bc64a0105e65"
+    },
+    {
+      "file": "img_0055.png",
+      "layout": {
+        "font_size": 20,
+        "height": 162,
+        "kind": "list",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "路上堵车晚到十分钟",
+        "本月账单已生成",
+        "config error: timeout 3000"
+      ],
+      "pixel_sha256": "743b1f2d73976ca1cde9e7fd77e90162dbca470bd76b8b661be7a169ad287b46",
+      "queries": [
+        "路上堵车",
+        "本月账单",
+        "config"
+      ],
+      "sha256": "67341a7a1e9648c89bbab04a046c682fc7ed4ebfea50eaf38e0b7038a24ea546"
+    },
+    {
+      "file": "img_0056.png",
+      "layout": {
+        "font_size": 24,
+        "height": 156,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "有效期至 2027 年 3 月",
+        "会议改到下午三点"
+      ],
+      "pixel_sha256": "993d09c7250bd99d3f2f78395a0e5abbea13fa96b2a3402c6eb27dbe0aab5d5b",
+      "queries": [
+        "有效期至",
+        "会议改到"
+      ],
+      "sha256": "ecab3d0980383a0cf5c595243011523b84269006303dd3080d4af3645b60e7e6"
+    },
+    {
+      "file": "img_0057.png",
+      "layout": {
+        "font_size": 24,
+        "height": 118,
+        "kind": "titlebar",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "这个方案我再改一版"
+      ],
+      "pixel_sha256": "4c1d3ae6fc7d7efc603876341d1bb3cb18540134b834d5858d07fbb00b486794",
+      "queries": [
+        "这个方案"
+      ],
+      "sha256": "42b7daf7be2c8fbd319eec362d29c3440c4e285efdf0a65964769ea524c89720"
+    },
+    {
+      "file": "img_0058.png",
+      "layout": {
+        "font_size": 20,
+        "height": 162,
+        "kind": "bubble_left",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "config error: timeout 3000",
+        "failed to bind port 8080",
+        "显示行号"
+      ],
+      "pixel_sha256": "32950aaa0e9c4160ac92914f58de129c19aad6208eef46b7e02bbfe232dc428f",
+      "queries": [
+        "config",
+        "failed",
+        "显示行号"
+      ],
+      "sha256": "73d04756f48e94b480582d4c09b0bbec9e39d9b62f7dd3fe9f8bf47ffb0a4d4e"
+    },
+    {
+      "file": "img_0059.png",
+      "layout": {
+        "font_size": 20,
+        "height": 114,
+        "kind": "titlebar",
+        "line_count": 1,
+        "width": 520
+      },
+      "lines": [
+        "本月账单已生成"
+      ],
+      "pixel_sha256": "7c1e3966b88e72a932a339a328e043e7684cf9d6a5e02d14aa88ba35bd0f71d2",
+      "queries": [
+        "本月账单"
+      ],
+      "sha256": "c9b8929a59b0041e52741b6d8b5b655ee65fc582f359a3674f5d692318cd0290"
+    },
+    {
+      "file": "img_0060.png",
+      "layout": {
+        "font_size": 34,
+        "height": 204,
+        "kind": "bubble_right",
+        "line_count": 3,
+        "width": 685
+      },
+      "lines": [
+        "有效期至 2027 年 3 月",
+        "Connection refused by server",
+        "这个方案我再改一版"
+      ],
+      "pixel_sha256": "949e1cdec0be46092841092011725d708da553e49828a2c06cb1c62cde3fbfcc",
+      "queries": [
+        "有效期至",
+        "Connection",
+        "这个方案"
+      ],
+      "sha256": "2a35e43bc972697c8aa778d5ac562420ce0ae26cb0b2ebb1e26cf04590ab80b5"
+    }
+  ],
+  "schema": "picrecall-bench/1",
+  "seed": 20261016,
+  "thresholds": {
+    "ocr_line_recall": 0.9,
+    "query_recall": 0.9
+  }
+}

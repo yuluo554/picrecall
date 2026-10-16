@@ -205,9 +205,15 @@ def cmd_bench_gen(args):
             result = bench.check_generated(out_dir, data_dir=data_dir, seed=args.seed,
                                            count=args.count)
             if result["ok"]:
-                _out(args, result, ["再生成一致（%d 张图，sha256 逐一比对通过）" % result["images"]])
+                note = result.get("note")
+                msg = "再生成一致（%d 张图，sha256 逐一比对通过）" % result["images"]
+                if note:
+                    msg = "再生成一致（%d 张图；%s）" % (result["images"], note)
+                _out(args, result, [msg])
                 return config.EXIT_OK
             print("基准漂移：%s" % result["reason"], file=sys.stderr)
+            if result.get("diff"):
+                print("  定位：%s" % result["diff"], file=sys.stderr)
             return config.EXIT_FINDINGS
         manifest = bench.gen_synthetic(out_dir, data_dir=data_dir, seed=args.seed,
                                        count=args.count)
@@ -234,9 +240,10 @@ def cmd_bench_run(args):
 
     payload = report
     human = [
-        "OCR 行识别率: %.4f（门槛 %.2f，%d/%d 行）"
+        "OCR 行识别率: %.4f（门槛 %.2f，%d/%d 行；严格单条口径 %.4f）"
         % (report["ocr"]["recall"], report["thresholds"]["ocr_line_recall"],
-           report["ocr"]["detected_lines"], report["ocr"]["total_lines"]),
+           report["ocr"]["detected_lines"], report["ocr"]["total_lines"],
+           report["ocr"].get("recall_strict_single_line", 0.0)),
         "检索命中率: %.4f（门槛 %.2f，%d/%d 查询；误召回 %d）"
         % (report["search"]["recall"], report["thresholds"]["query_recall"],
            report["search"]["recalled_queries"], report["search"]["total_queries"],
