@@ -56,7 +56,7 @@
 | `mean_conf` | 行置信度均值 |
 | `line_count` | 输出行数 |
 | `engine` | 引擎标识（`rapidocr-onnxruntime/<版本>`） |
-| `run_sig` | **输入签名** = `sha256(file_hash | engine_ver | profile | OCR_CONF_MIN)`；写入前比对，**签名不同不覆盖**（防陈旧结果覆盖新内容，K4） |
+| `run_sig` | **输入签名** = `sha256(file_hash | engine_ver | profile | OCR_CONF_MIN)`；绑定"结果 ↔ 输入身份"。内容变更时**作废派生行**（消费侧），磁盘与台账 `file_hash` 不符时**拒绝落库**（写入侧）——语义与落点见 plan/04 §四（K4，M3 定案） |
 
 ### `chunk`（展示用原始行）
 

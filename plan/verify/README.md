@@ -374,3 +374,137 @@ M0/M1 的 K1–K19 全部仍然有效。M2 **未新增 K 编号**，但对两条
   ③ 近似重复只覆盖"缩放/编码"形态，**未覆盖旋转/水印/裁切**——真实截图里的这些形态
      是否仍落阈值内，本轮**未实测**（如实登记为缺口，不做无据声明）；
   ④ 0 组的"合法空结果"语义（K8）仍然成立，真样例是**补充**而非替代。
+
+## M3（2026-10-17）：检索 + OCR
+
+> 本节为**增量追加**，不覆盖 M0/M1/M2 章节（上文 §M0 一–七、§M1 一–八、§M2 一–八）。
+> 上一棒待办出处：`plan/HANDOFF-M3.md` §二；出口判据：同文件 §五 DoD checklist。
+
+### 一、K4 契约落差定案（本棒最重要的处置）
+
+**要解决的问题**（`plan/HANDOFF-M3.md` §二 2 点明）：plan/04 §四 写"签名不同 → **不覆盖**"，
+而代码是"无条件 `ON CONFLICT DO UPDATE` 覆盖"——**两处口径并存**。定案前先实测两条候选语义的后果：
+
+| 候选 | 实测后果 | 结论 |
+|---|---|---|
+| 字面实现"签名不一致就不覆盖" | **闭锁**：内容变更 → `status=pending` → 重识别时签名必然不同 → 永远拒绝落库，该图**永远搜不到** | ❌ 不可行 |
+| 语义改为"结果只在其输入身份仍成立时才有效" | 内容变更 → 旧派生行**即时作废**（不误导检索）+ 磁盘与台账不符时**拒绝落库**（不错绑） | ✅ 定案 |
+
+**定案语义**（`run_sig` 真正参与判定，分两侧落地）：
+
+| 侧 | 落点 | 行为 | 守门测试 |
+|---|---|---|---|
+| 消费侧（失效） | `index.apply_scan`（hash 异分支）+ `db.delete_derived_rows` | 内容变更 → **立即作废** `ocr_text`/`chunk`/`chunk_fts`（`low_conf_lines_*` 一并清） | `test_content_change_invalidates_stale_text_before_reocr` |
+| 写入侧（拒绝） | `ocr.ocr_pending` | 落库前比对磁盘内容与台账 `files.file_hash`（复用 K2 快速路径）；不符 → **不落库**、留 `pending`、记"输入已变，需重建"、**不计** `ocr_tries`、报告 `stale` 计数（CLI exit 1） | `test_ocr_refuses_to_store_when_disk_drifted_from_ledger`、`test_cli_ocr_reports_stale_as_findings` |
+| 签名覆盖度 | `ocr.compute_run_sig` | 四维（内容/引擎/profile/阈值）逐维改变签名 | `test_run_sig_covers_every_input_dimension`（3 参数化项） |
+
+**定案前实测的陈旧缺口**（原代码真实存在的缺陷，非纸面推测）：
+
+```
+内容变更后（重识别前）：ocr_text 1 行、chunk 1 行仍在
+search "账单" → 1 命中    ← 命中的是图里**已经没有**的文字（假命中）
+```
+
+修复后同一场景实测：`ocr_text=0 / chunk=0 / chunk_fts=0`，`search "账单" → 0`。
+
+> **文档同步**：plan/03 §六、plan/04 §三·四·十、`data/schema_notes.md`、README 均已改为定案口径
+> （**四处口径一致，无并存**）；K4 在 plan/04 §十 的条目改为"作废派生行 + 拒绝落库"。
+> `data/LEDGER.md` 因 `schema_notes.md` 改动而重建（K19 门实测先红后绿，见 §三 #10）。
+
+### 二、M3 实测暴露并修复的缺陷（回归已锁）
+
+| # | 缺陷 | 根因 | 回归测试 |
+|---|---|---|---|
+| 1 | **陈旧 OCR 文本在内容变更后仍被检索到**（假命中） | `index.apply_scan` 内容变更分支只置 `pending`，**未作废** `ocr_text`/`chunk`；`search` 无任何"结果是否仍有效"判定 | `test_content_change_invalidates_stale_text_before_reocr`（变异 1 已证：去掉作废 → 红） |
+| 2 | **`run_sig` 名义存在、实际不参与任何判定**（K4 空转） | `_store_ocr` 无条件覆盖；sig 仅被写入，从不被读来比对；磁盘偏离台账时结果照样落库 | `test_ocr_refuses_to_store_when_disk_drifted_from_ledger`（变异 2 已证：去掉拒绝 → 2 项红） |
+| 3 | **排序 tie-breaker 缺"有区分度"的端到端样例**（此前断言可能空转） | `ocr_pending` 按 `ORDER BY path` 遍历，插入序恰好等于路径序 → `ORDER BY rank` 单独也碰巧同序 | `test_tie_break_by_path_when_rowid_order_differs`（变异 A 已证：`ORDER BY rank` 单独 → 红） |
+
+> 缺陷 3 的严重性：M3 前 K7 的 tie-breaker **无端到端断言**。首次构造（先插 b、后插 a）在
+> 变异验证下**未能打红**——因为插入序与路径序巧合同向，断言无区分度。改用"**先全量识别、
+> 再让路径靠前者重识别**"（其 FTS rowid 变新 → rowid 序与路径序**相反**）后，变异才红。
+> **这是本轮第二次"看似覆盖、实则空转"的实测纠正**（第一次见 §M2 二 缺陷 1）。
+
+### 三、命令逐条执行与退出码语义（本地等价校验）
+
+| # | 命令 | 实测结果 | 判定 |
+|---|---|---|---|
+| 1 | `index data/synthetic --db smoke/m3/b.db` | 新增 60；exit 0 | ✅ |
+| 2 | `ocr --db smoke/m3/b.db`（**真 OCR，非桩**） | 成功 60 / 失败 0 / 陈旧 0；exit 0；耗时约 3 分钟（60 图） | ✅ |
+| 3 | `search "账单" --db smoke/m3/b.db` | **命中 5 条**（img_0001/0022/0027/0055/0059），片段为原文 `本月[账单]已生成`；exit 0 | ✅ DoD ③ |
+| 4 | `stats --db smoke/m3/b.db` | 60 文件、`{"indexed": 60}`；exit 0 | ✅ |
+| 5 | `bench run --db smoke/m3/b.db --data data/synthetic` | OCR 识别率 **0.954545**（严格单条 0.890909）、检索命中率 **0.9375**、误召回 0、`passed=True`；exit 0 | ✅ |
+| 6 | `bench run --inject-defect ocr_drop` | exit 1（必打红） | ✅ 可证伪 |
+| 7 | `bench run --inject-defect search_drop` | exit 1（必打红） | ✅ 可证伪 |
+| 8 | 内容变更后（重识别前）`search` | 派生行 0/0/0，命中 0（陈旧不再可见） | ✅ K4 消费侧 |
+| 9 | 扫描后改文件、直接 `ocr`（CLI） | 输出"输入已变、未落库 1 项…请先重跑 index"；exit **1**；`stats` 仍 `pending` | ✅ K4 写入侧 |
+| 10 | `tools/update_data_ledger.py --check` | 改 `schema_notes.md` 后**先红**（K19 门生效）→ 重建 → **绿** | ✅ |
+| 11 | `dedupe --db <dupes库>` 回归 | 仍 **6 组**；exit 1；CSV 双跑逐字节一致 | ✅ M2 未回退 |
+| 12 | `bench gen --check --data data --out data/synthetic` | 再生成一致（60 图 sha256 逐一通过） | ✅ 主集未漂移 |
+| 13 | `pytest`（3.12 / 3.8，无 DLL） | **124 passed + 2 skipped**（双通道收集数一致） | ✅ |
+| 14 | `pytest`（两通道，指向实测 DLL） | **126 passed** | ✅ |
+
+### 四、守门变异验证（"弄坏被测行为 → 门必须变红"）
+
+本轮**逐项注入 → 复跑 → 复原 → 复跑**，全部实测：
+
+| 变异（改被测行为） | 期望 | 实测 |
+|---|---|---|
+| `index` 不作废陈旧派生行（回退旧行为） | K4 消费侧门红 | ✅ `test_content_change_invalidates_stale_text_before_reocr` FAILED |
+| `ocr` 去掉陈旧拒绝分支（照旧落库） | K4 写入侧门红 | ✅ 2 项 FAILED（含 CLI 那条） |
+| OCR 失败**直抛**（中断整批） | K5 门红 | ✅ 4 项 FAILED |
+| `run_sig` 丢掉 `profile` 维 | 签名覆盖度门红 | ✅ `test_run_sig_covers_every_input_dimension[profile-simple]` FAILED |
+| 检索 `ORDER BY` 丢 tie-breaker（只留 rank） | K7 tie-breaker 门红 | ✅ `test_tie_break_by_path_when_rowid_order_differs` FAILED |
+| `ORDER BY` 把 `line_no` 改 `DESC` | 同图内定序门红 | ✅ `test_tie_break_by_line_no_within_same_file` FAILED |
+| 删 `search` 的 profile 不匹配校验 | K6 门红 | ✅ `test_profile_mismatch_is_exit_2_end_to_end` FAILED |
+| `search` 忽略 `limit`（恒返回全部） | limit 截断门红 | ✅ `test_hits_over_limit_are_truncated_deterministically` FAILED |
+| 删 `search` 的 `status != 'missing'` 过滤 | missing 排除门红 | ✅ `test_missing_files_are_excluded_from_search` FAILED |
+
+> 共 **9 项**变异逐项实测；复原后全绿，工作区 `git status` 无残留（备份文件在 `/tmp`，不落仓库）。
+> 其中"tie-breaker 丢 rank 之外键"**首轮未红**——据此重构了样例（见 §二 缺陷 3），重构后必红。
+
+### 五、M3 新增/修订的 K 口径
+
+M0/M1/M2 的 K1–K19 全部仍然有效。M3 **未新增 K 编号**，对 **K4/K6/K7** 做了落点加固与语义定案：
+
+| K | M3 处置 | 守门 |
+|---|---|---|
+| K4 | **语义定案**：从"签名一致才覆盖"（不可行，会闭锁）改为"结果只在其输入身份仍成立时有效"；落点扩到 `index`+`db`（消费侧作废）与 `ocr`（写入侧拒绝） | `tests/test_ocr_pipeline.py`（6 项） |
+| K5 | 端到端补齐（此前只有缺依赖 exit 3 契约） | `tests/test_ocr_pipeline.py`（4 项） |
+| K6 | profile 不匹配 exit 2 的**端到端**形态（此前仅单测级） | `tests/test_search_end_to_end.py`（2 项） |
+| K7 | 排序稳定性的**有区分度**端到端断言（双跑逐项 + rowid≠path 的 tie-breaker + line_no 级） | `tests/test_search_end_to_end.py`（4 项） |
+| K8 | 零命中 exit 0 端到端（含 CLI 形态） | `test_zero_hits_is_exit_0_and_empty` |
+
+### 六、新增数据资产与台账（M3 物化）
+
+| 资产 | 入 git | 说明 |
+|---|---|---|
+| `tests/test_ocr_pipeline.py` | ✅ | 11 项：K5 失败续跑 + K4 陈旧处置 + 签名覆盖度 |
+| `tests/test_search_end_to_end.py` | ✅ | 12 项：K6/K7 端到端 + limit 边界 + missing 排除 |
+| `data/LEDGER.md` | ✅ | **重建**（`schema_notes.md` 口径同步 → sha256 更新） |
+
+> 本轮**未新增**数据文件；`data/synthetic/`（60 图）与 `data/synthetic_dupes/`（6 族）保持原样，
+> `bench gen --check` 实测未漂移。
+
+### 七、不可本机实跑的通路（显式标注）
+
+| 通路 | 为何本机跑不了 | 处置 |
+|---|---|---|
+| CI 三矩阵 | **仍无远端**（`git remote -v` 空），workflow 从未执行 | 结论继续写"本地等价校验（未接远端，CI 待首推验证）"；M6 首推后据实补记 run id |
+| 真实截图的"内容变更"形态 | 无真实截图（隐私红线，不入库） | 用合成图 + 桩引擎覆盖控制流；**未覆盖**真实场景中"扫描与识别之间的编辑"频率与形态（如实登记为缺口） |
+| 多进程/并发下的 K4 | 本机单进程验证 | 并发写入是否仍保证"作废与拒绝"的原子性**未实测**（如实登记为缺口） |
+
+### 八、M3 自评
+
+- **已完成**：K4 契约落差**定案**（语义从"签名一致才覆盖"改为"结果绑定输入身份"，落消费/写入两侧），
+  并**实测修复**了两个真实缺陷（陈旧文本被检索 = 假命中；`run_sig` 空转）；
+  K5 失败续跑端到端（不中断 / `ocr_tries` 递增 / `--retry-failed` / 修复后 indexed）；
+  K6 profile 不匹配 exit 2 端到端；K7 排序稳定（双跑逐项 + **有区分度**的 tie-breaker 构造）；
+  limit 边界与 missing 排除；**真 OCR 端到端冒烟**（60/60、`账单` 5 命中、bench 0.9545/0.9375 达标、
+  注入缺陷必红）；双解释器 **124+2skip（带 DLL 126）**全绿；**9 项变异**逐项实测（含一次"首轮未红→重构"）；
+  四处口径文档同步 + 台账重建（K19 门先红后绿）。
+- **未做（留给后续里程碑）**：门槛标定与更大规模基准、分 profile 门槛（M4）；
+  干净环境/打包验证（M5）；发布（M6）。
+- **诚实口径**：
+  ① CI 仍未跑过（无远端）；② K4 的并发安全性**未实测**（单进程验证）；
+  ③ "陈旧"只在"内容变更"与"扫描后编辑"两种形态上实测，真实用户的编辑时序**未覆盖**；
+  ④ 本轮真 OCR 冒烟耗时约 3 分钟（60 图），未做更大规模吞吐实测（M4）。

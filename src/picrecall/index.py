@@ -15,7 +15,7 @@ import os
 import time
 
 from . import config
-from .db import write_txn
+from .db import delete_derived_rows, write_txn
 
 _HASH_CHUNK = 1 << 20  # 1MiB
 
@@ -166,6 +166,10 @@ def apply_scan(conn, entries, now_ns=None):
                     "status = 'pending', last_seen_ns = ?, ocr_error = NULL WHERE id = ?",
                     (e["size"], e["mtime_ns"], w, h, new_hash, now_ns, row["id"]),
                 )
+                # 内容已变：旧 OCR/分词结果是**陈旧**的（文本可能已不在图中）。
+                # 若留着，`search` 会在重识别前继续命中已不存在的文字——这正是 K4
+                # 要防的"陈旧结果被消费"。作废派生行，待重识别重建。
+                delete_derived_rows(conn, row["id"])
                 changed += 1
 
         # 本次未见 → 只标记失效（K3：不删行、不动文件）

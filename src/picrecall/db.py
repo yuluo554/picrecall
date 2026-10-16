@@ -113,5 +113,21 @@ def write_txn(conn):
         conn.commit()
 
 
+def delete_derived_rows(conn, file_id):
+    """作废某个文件的**派生结果行**（`ocr_text` / `chunk` / `chunk_fts` + 低置信度计数）。
+
+    只作用于索引库的派生表，**不动** `files` 台账行、更不动用户文件（K3 的"永不删行"
+    约束针对台账与用户文件，不针对"随内容失效即作废"的派生缓存）。
+    调用方须已在 `write_txn()` 内（本函数不自开事务，避免嵌套提交）。
+    """
+    conn.execute(
+        "DELETE FROM chunk_fts WHERE rowid IN (SELECT id FROM chunk WHERE file_id = ?)",
+        (file_id,),
+    )
+    conn.execute("DELETE FROM chunk WHERE file_id = ?", (file_id,))
+    conn.execute("DELETE FROM ocr_text WHERE file_id = ?", (file_id,))
+    conn.execute("DELETE FROM meta WHERE key = ?", ("low_conf_lines_%d" % file_id,))
+
+
 def schema_version(conn):
     return get_meta(conn, "schema_version", SCHEMA_VERSION)

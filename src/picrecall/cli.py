@@ -100,11 +100,14 @@ def cmd_ocr(args):
     human = [
         "识别完成：成功 %d / 失败 %d / 处理 %d" % (report["ok"], report["failed"], report["considered"]),
     ]
+    if report.get("stale"):
+        human.append("输入已变、未落库 %d 项（内容在扫描后改动）：请先重跑 picrecall index 再识别"
+                     % report["stale"])
     if report["failed"]:
         human.append("有失败项：可运行 picrecall ocr --retry-failed 续跑")
     _out(args, payload, human)
-    # 有失败项 = 检出问题（exit 1，非跑挂）
-    return config.EXIT_FINDINGS if report["failed"] else config.EXIT_OK
+    # 有失败项/陈旧项 = 检出问题（exit 1，非跑挂）
+    return config.EXIT_FINDINGS if (report["failed"] or report.get("stale")) else config.EXIT_OK
 
 
 def cmd_search(args):

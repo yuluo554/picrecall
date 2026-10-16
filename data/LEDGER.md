@@ -10,7 +10,7 @@
 | `data/whitelist_texts.txt` | 白名单文本集（合成图渲染素材源；假值登记处） | 自制（本项目编写；号码/单号一律假值） | MIT（本项目） | `3a9e1ecdc259252fe243cb4cabdbe1a0df006f1bca0b2b431d59a4169f1e153d` | 1544 |
 | `data/synthetic/manifest.json` | 合成截图集真值 manifest（图→文本→应命中词→版式→指纹） | 生成器产出（picrecall.bench.gen_synthetic，seed=20261016，count=60） | MIT（本项目） | `ed8acf7976181cc3452866e542414ec35aff5aff8986b997d4af45e4de78cfd9` | 31771 |
 | `data/synthetic_dupes/manifest.json` | 近似重复族真值 manifest（dedupe 端到端真样例：族→成员→应同组） | 生成器产出（picrecall.bench.gen_dupes，seed=20261017，count=6 族 × 3 成员） | MIT（本项目） | `4cc52897438dd9630d29c35570a9b9b9c603158e7510a9c8b43ebd4aafb2214c` | 11937 |
-| `data/schema_notes.md` | 索引库 schema 与迁移口径（**只引用不复述** DDL；真源在 db.SCHEMA_SQL） | 手工（据 db.py/__init__.py 实况编写） | MIT（本项目） | `ce64d19a457d4382fb1678fb1269873adbdd34fbc3b1cd50d3ab7ed376cd26a9` | 8356 |
+| `data/schema_notes.md` | 索引库 schema 与迁移口径（**只引用不复述** DDL；真源在 db.SCHEMA_SQL） | 手工（据 db.py/__init__.py 实况编写） | MIT（本项目） | `6d5185fa9e98023bce26c26f8ef9ef2ee48d60925441ba78ef735a0e81f2061a` | 8484 |
 | `data/README.md` | 依据查证 + 数据源可获取性 + 合成数据纪律 | 手工（含 gh api 实测记录） | MIT（本项目） | `7cc85239dd2ca85437fee2fff0b3f90f9ade6213ffe1992308419e069145146b` | 9206 |
 
 ## 重建命令（逐份）
