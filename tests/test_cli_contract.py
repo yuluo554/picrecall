@@ -109,3 +109,47 @@ def test_json_output_is_machine_readable(tmp_path, capsys):
     payload = json.loads(captured.out)
     assert payload["db"] == os.path.abspath(dbp)
     assert "scan" in payload
+
+
+# ── M2：bench gen --dupes 契约 ───────────────────────────────────────────────
+
+def test_bench_gen_dupes_creates_manifest(tmp_path):
+    """`--dupes` 产出族 manifest（exit 0），且**不**创建主集目录。"""
+    import json
+    import os
+
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    out = tmp_path / "dupes"
+    assert _run(["bench", "gen", "--dupes", "--data", data_dir, "--out", str(out)]) == config.EXIT_OK
+    with open(str(out / "manifest.json"), "r", encoding="utf-8") as fh:
+        m = json.load(fh)
+    assert m["schema"] == "picrecall-dupes/1"
+    assert m["family_count"] >= 1
+    assert len(m["images"]) == m["family_count"] * m["members_per_family"]
+
+
+def test_bench_gen_dupes_conflicts_with_check(tmp_path, capsys):
+    """`--dupes --check` 组合是用法错误——不得**静默忽略**用户给的旗标。"""
+    import os
+
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    out = tmp_path / "dupes"
+    assert _run(["bench", "gen", "--dupes", "--check", "--data", data_dir,
+                 "--out", str(out)]) == config.EXIT_USAGE
+    captured = capsys.readouterr()
+    assert "--dupes" in captured.err and "--check" in captured.err
+
+
+def test_bench_gen_dupes_is_deterministic(tmp_path):
+    """同 seed 双跑 → manifest 逐字节一致（K13）。"""
+    import os
+
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    a, b = tmp_path / "a", tmp_path / "b"
+    assert _run(["bench", "gen", "--dupes", "--data", data_dir, "--out", str(a)]) == config.EXIT_OK
+    assert _run(["bench", "gen", "--dupes", "--data", data_dir, "--out", str(b)]) == config.EXIT_OK
+    with open(str(a / "manifest.json"), "rb") as fh:
+        first = fh.read()
+    with open(str(b / "manifest.json"), "rb") as fh:
+        second = fh.read()
+    assert first == second

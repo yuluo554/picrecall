@@ -37,6 +37,13 @@ data/synthetic/*.jpeg
 data/synthetic/*.bmp
 data/synthetic/*.webp
 
+# 近似重复族子集（M2，dedupe 端到端真样例）：图片同样不入 git，只入 manifest
+data/synthetic_dupes/*.png
+data/synthetic_dupes/*.jpg
+data/synthetic_dupes/*.jpeg
+data/synthetic_dupes/*.bmp
+data/synthetic_dupes/*.webp
+
 # IDE / OS
 .idea/
 .vscode/

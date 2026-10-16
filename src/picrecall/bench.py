@@ -3,6 +3,7 @@
 两块：
   gen_synthetic  —— 确定性生成合成截图集 + manifest（植入真值）
   run_bench      —— 真值对账（识别率 + 检索命中率），观测运行时实算
+  gen_dupes      —— 确定性生成**近似重复族**（模块 4 端到端"能真出组"的样例，M2）
 
 纪律：
   - K13 确定性：自研 splitmix64 RNG（禁 stdlib random）、固定 seed、无时间戳、位级一致；
@@ -19,6 +20,7 @@ from . import config
 from .serialize import write_json
 
 MANIFEST_SCHEMA = "picrecall-bench/1"
+DUPES_MANIFEST_SCHEMA = "picrecall-dupes/1"
 
 # ── 口径锚定（plan/05 §四，唯一实现处，文档只引用）──
 # OCR 识别率口径：以"合成图上应识别出的文本行是否被检出"计。
@@ -32,6 +34,23 @@ MANIFEST_SCHEMA = "picrecall-bench/1"
 #             供交叉核验，README 与报告显式声明。
 # 检索命中率口径：query 的返回图片集合 **包含** manifest 中声明该 query 的图片集合（召回优先）；
 #   同时另记精确率（返回集中非真值图片数），如实报告不掩盖误召回。
+
+# ── 近似重复族口径锚定（M2，plan/04 §六）──
+# 为何是这样造"近似重复"（M2 实测，见 plan/verify §M2 一）：
+#   ① pHash **不抗平移**：实测把底图平移 2px，汉明距离即达 26（>默认阈值 8）；
+#      平移 12px 达 120。故"轻微位移"**不能**用作近似重复的构造手段（HANDOFF-M2 §二 1
+#      的原提议据此被实测否决）。
+#   ② 缩放可落在阈值内：0.70–1.30 各档实测族内最大距离 6（60 个底图逐一实测）。
+#   ③ 亮度也能落阈值内，但"正/反向极端亮度"两成员之间会擦边（实测最大 8–10），
+#      故本生成器**只用缩放**，不用亮度，且成员数压到 3。
+#   ④ 低分辨率成员用 **BMP**（无压缩）编码 → 其字节数反而**大于**高分辨率成员，
+#      使 K11 第①级（分辨率）与第②级（文件大小）判决**相反**——代表选择因此有区分度，
+#      而不是"分辨率最高者恰好也是文件最大者"这种无信息量的巧合。
+DUPES_MEMBER_SPECS = (
+    {"role": "base", "scale": 1.00, "fmt": "PNG"},
+    {"role": "hi_res", "scale": 1.15, "fmt": "PNG"},
+    {"role": "lo_res_big", "scale": 0.95, "fmt": "BMP"},
+)
 
 
 def _default_data_dir():
@@ -160,6 +179,93 @@ def gen_synthetic(out_dir, data_dir=None, seed=None, count=None, quiet=False):
         "generator_version": _pkg_version(),
         "image_count": count,
         "thresholds": dict(config.BENCH_DEFAULT_THRESHOLDS),
+        "images": images,
+    }
+    manifest_path = os.path.join(out_dir, "manifest.json")
+    write_json(manifest_path, manifest)
+    return manifest_path
+
+
+def _scale_image(img, factor):
+    """确定性缩放（LANCZOS）。用 round() 而非 int() 截断，避免累计偏一点。"""
+    w, h = img.size
+    nw = max(1, int(round(w * factor)))
+    nh = max(1, int(round(h * factor)))
+    if (nw, nh) == (w, h):
+        return img.copy()
+    # Pillow 10 起 Image.LANCZOS 仍在；9.x 需 Image.ANTIALIAS（已废弃于 10）。
+    try:
+        resample = img.Resampling.LANCZOS
+    except AttributeError:  # Pillow < 9.1
+        resample = getattr(img, "LANCZOS", getattr(img, "ANTIALIAS", 1))
+    return img.resize((nw, nh), resample)
+
+
+def gen_dupes(out_dir, data_dir=None, seed=None, count=None):
+    """生成**近似重复族**合成集 + manifest（M2；模块 4 端到端真样例）。
+
+    与 `gen_synthetic` 分开的独立子集：**不改动** `data/synthetic/manifest.json`
+    （M1 已登记其 sha256/pixel_sha256，改动会让 M1 留档的基准数字失效）。
+
+    每"族"含 3 张近似重复图（同一文本 + 同一版式，仅缩放/编码不同），
+    族内 pHash 距离实测 ≤6（默认阈值 8），族间实测 ≥56 → 分组必出组且不误并。
+
+    manifest 只存**输入与期望**（K14）：
+      - `lines`/`queries`/`layout`：渲染了什么（与主集同口径）；
+      - `family_id`：构造时即已知的"应同组"真值（是期望，不是观测）；
+      - `role`/`scale`/`format`/`width`/`height`：该成员怎么造的。
+    观测（实际分了几组、谁是代表）一律不入 manifest，由测试/调用方运行时实算。
+    """
+    from PIL import Image, ImageDraw
+
+    seed = config.BENCH_DUPES_SEED_DEFAULT if seed is None else int(seed)
+    count = config.BENCH_DUPES_COUNT_DEFAULT if count is None else int(count)
+    data_dir = data_dir or _default_data_dir()
+    whitelist = _load_whitelist(data_dir)
+
+    os.makedirs(out_dir, exist_ok=True)
+    rng = _SplitMix64(seed)
+    images = []
+
+    for fam in range(1, count + 1):
+        n_lines = min(rng.randint(2, 3), len(whitelist))
+        pool = list(whitelist)
+        chosen = [pool.pop(rng.next_u64() % len(pool)) for _ in range(n_lines)]
+        kind = rng.choice(LAYOUT_KINDS)
+        size = rng.choice(FONT_SIZES)
+
+        # 同一族的底图只渲染一次，各成员由同一张底图派生（保证"近似"而非"相同"）
+        base_img, layout_meta = _render(kind, chosen, size, rng, Image, ImageDraw)
+        for spec in DUPES_MEMBER_SPECS:
+            img = _scale_image(base_img, spec["scale"])
+            name = "dup_%04d_%s.%s" % (fam, spec["role"], spec["fmt"].lower())
+            path = os.path.join(out_dir, name)
+            img.save(path, format=spec["fmt"])
+            images.append(
+                {
+                    "file": name,
+                    "family_id": fam,
+                    "role": spec["role"],
+                    "scale": spec["scale"],
+                    "format": spec["fmt"],
+                    "lines": list(chosen),
+                    "queries": _derive_queries(chosen),
+                    "layout": dict(layout_meta, width=img.size[0], height=img.size[1]),
+                    "sha256": _sha256(path),
+                    "pixel_sha256": _pixel_sha256(path),
+                }
+            )
+
+    manifest = {
+        "schema": DUPES_MANIFEST_SCHEMA,
+        "seed": seed,
+        "generator": "picrecall.bench.gen_dupes",
+        "generator_version": _pkg_version(),
+        "family_count": count,
+        "members_per_family": len(DUPES_MEMBER_SPECS),
+        "image_count": len(images),
+        # 阈值随 manifest 下发（与主集同纪律：数据非代码）
+        "thresholds": {"phash_max_distance": config.PHASH_MAX_DISTANCE},
         "images": images,
     }
     manifest_path = os.path.join(out_dir, "manifest.json")

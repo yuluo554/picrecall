@@ -1,0 +1,458 @@
+{
+  "family_count": 6,
+  "generator": "picrecall.bench.gen_dupes",
+  "generator_version": "0.1.0",
+  "image_count": 18,
+  "images": [
+    {
+      "family_id": 1,
+      "file": "dup_0001_base.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 34,
+        "height": 204,
+        "kind": "bubble_right",
+        "line_count": 3,
+        "width": 543
+      },
+      "lines": [
+        "disk quota exceeded",
+        "优惠券抵扣 15 元",
+        "转账成功 尾号 6688"
+      ],
+      "pixel_sha256": "cc42f30ba3fab39c69b3eb0da3ccbfac5f8cf6f5d67ecd03a144f02816ecb662",
+      "queries": [
+        "disk",
+        "优惠券抵",
+        "转账成功"
+      ],
+      "role": "base",
+      "scale": 1.0,
+      "sha256": "87ac949e1579b9a02895a9104e02edb781afc14a43d5f7780b84696a22701174"
+    },
+    {
+      "family_id": 1,
+      "file": "dup_0001_hi_res.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 34,
+        "height": 235,
+        "kind": "bubble_right",
+        "line_count": 3,
+        "width": 624
+      },
+      "lines": [
+        "disk quota exceeded",
+        "优惠券抵扣 15 元",
+        "转账成功 尾号 6688"
+      ],
+      "pixel_sha256": "97067e322c99f3d391307c48bade867e0aeca530f9f156f563896593b9cefd64",
+      "queries": [
+        "disk",
+        "优惠券抵",
+        "转账成功"
+      ],
+      "role": "hi_res",
+      "scale": 1.15,
+      "sha256": "922e5f85f6419603eb71186cf949ab92f499aa40dc1af31b1b3daac9f7c72ac4"
+    },
+    {
+      "family_id": 1,
+      "file": "dup_0001_lo_res_big.bmp",
+      "format": "BMP",
+      "layout": {
+        "font_size": 34,
+        "height": 194,
+        "kind": "bubble_right",
+        "line_count": 3,
+        "width": 516
+      },
+      "lines": [
+        "disk quota exceeded",
+        "优惠券抵扣 15 元",
+        "转账成功 尾号 6688"
+      ],
+      "pixel_sha256": "e8b21368192d585d50df91fcc3e9703d4fc3b935a9da1e28aa60f6dfa994021d",
+      "queries": [
+        "disk",
+        "优惠券抵",
+        "转账成功"
+      ],
+      "role": "lo_res_big",
+      "scale": 0.95,
+      "sha256": "f767342c3df4a4dbac1b5f856cd4d4cd9c233038f550eb7eb2f98dc31ec8ff5e"
+    },
+    {
+      "family_id": 2,
+      "file": "dup_0002_base.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 20,
+        "height": 128,
+        "kind": "plain",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "同步频率 手动",
+        "有效期至 2027 年 3 月"
+      ],
+      "pixel_sha256": "a60ec1dcd59cee4f45e76865eea5f2dea5c28fd790c03571e0cf4dd433b941ae",
+      "queries": [
+        "同步频率",
+        "有效期至"
+      ],
+      "role": "base",
+      "scale": 1.0,
+      "sha256": "80e3b49bb13267bdf5d2524ce99414c9dc7a3a8ea350b8f97b3f2fcebf245832"
+    },
+    {
+      "family_id": 2,
+      "file": "dup_0002_hi_res.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 20,
+        "height": 147,
+        "kind": "plain",
+        "line_count": 2,
+        "width": 598
+      },
+      "lines": [
+        "同步频率 手动",
+        "有效期至 2027 年 3 月"
+      ],
+      "pixel_sha256": "8d7db4a4655203c923332298239e26202d5ff7ab2156bf578d63fe82c4dec9d5",
+      "queries": [
+        "同步频率",
+        "有效期至"
+      ],
+      "role": "hi_res",
+      "scale": 1.15,
+      "sha256": "f4fdde5fee8b8cd3bfd8d818ebd512f36d6003a275d074b83211bf518819df86"
+    },
+    {
+      "family_id": 2,
+      "file": "dup_0002_lo_res_big.bmp",
+      "format": "BMP",
+      "layout": {
+        "font_size": 20,
+        "height": 122,
+        "kind": "plain",
+        "line_count": 2,
+        "width": 494
+      },
+      "lines": [
+        "同步频率 手动",
+        "有效期至 2027 年 3 月"
+      ],
+      "pixel_sha256": "555cd54515a717581ae995a8b2d127b1d9d1f5efe9c46ac35df8734500ea1285",
+      "queries": [
+        "同步频率",
+        "有效期至"
+      ],
+      "role": "lo_res_big",
+      "scale": 0.95,
+      "sha256": "19aa9953cb3a3a8560871d393e32f1ebd67353bdc81414557a3577eaa154f414"
+    },
+    {
+      "family_id": 3,
+      "file": "dup_0003_base.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 34,
+        "height": 156,
+        "kind": "list",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "failed to bind port 8080",
+        "订单金额 128.00 元"
+      ],
+      "pixel_sha256": "2271bdd917f3c27fa4121870f04d77d1ab5ec7e2aba4158fe1cc997efc0aa0e8",
+      "queries": [
+        "failed",
+        "订单金额"
+      ],
+      "role": "base",
+      "scale": 1.0,
+      "sha256": "a45c51b0fef131065f0efeeeeaaf2adff82622845e3a805cb2e700a71fc60fdb"
+    },
+    {
+      "family_id": 3,
+      "file": "dup_0003_hi_res.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 34,
+        "height": 179,
+        "kind": "list",
+        "line_count": 2,
+        "width": 598
+      },
+      "lines": [
+        "failed to bind port 8080",
+        "订单金额 128.00 元"
+      ],
+      "pixel_sha256": "c1772850304522934ec3c36138879b474ec396f9becb08b65b4f4fc0294c9561",
+      "queries": [
+        "failed",
+        "订单金额"
+      ],
+      "role": "hi_res",
+      "scale": 1.15,
+      "sha256": "aae29cbafcd98130a24ca5ab8038e2f2ccc58a2f467c70d1ca1c9b3c16d5ff60"
+    },
+    {
+      "family_id": 3,
+      "file": "dup_0003_lo_res_big.bmp",
+      "format": "BMP",
+      "layout": {
+        "font_size": 34,
+        "height": 148,
+        "kind": "list",
+        "line_count": 2,
+        "width": 494
+      },
+      "lines": [
+        "failed to bind port 8080",
+        "订单金额 128.00 元"
+      ],
+      "pixel_sha256": "18b4957eee9f19da7bb4fb8e8be3cedadcccfd2dda5ab484adc6618f44be5dfb",
+      "queries": [
+        "failed",
+        "订单金额"
+      ],
+      "role": "lo_res_big",
+      "scale": 0.95,
+      "sha256": "c79d002293d66d5f22678931b8b74a8ff7dd4716c09d199d536f47c456cff687"
+    },
+    {
+      "family_id": 4,
+      "file": "dup_0004_base.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 34,
+        "height": 176,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "本月账单已生成",
+        "字体大小 14"
+      ],
+      "pixel_sha256": "1533f87b568948cb3d0610d06c7208389bb6176e585b78be48d360e97584517f",
+      "queries": [
+        "本月账单",
+        "字体大小"
+      ],
+      "role": "base",
+      "scale": 1.0,
+      "sha256": "a12e137992d7f6b9742f677a15b2360278bcedc5b152d2153b6f0e73c8ba8f95"
+    },
+    {
+      "family_id": 4,
+      "file": "dup_0004_hi_res.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 34,
+        "height": 202,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 598
+      },
+      "lines": [
+        "本月账单已生成",
+        "字体大小 14"
+      ],
+      "pixel_sha256": "7671e9ef592564ad010eb2b4ab4810801a0a78d7133bd5a34c83813ccd53b993",
+      "queries": [
+        "本月账单",
+        "字体大小"
+      ],
+      "role": "hi_res",
+      "scale": 1.15,
+      "sha256": "b2abb3a318cf3dcff41316e9da16d3dd61e130fa7790f6d82a6c6220a196e383"
+    },
+    {
+      "family_id": 4,
+      "file": "dup_0004_lo_res_big.bmp",
+      "format": "BMP",
+      "layout": {
+        "font_size": 34,
+        "height": 167,
+        "kind": "titlebar",
+        "line_count": 2,
+        "width": 494
+      },
+      "lines": [
+        "本月账单已生成",
+        "字体大小 14"
+      ],
+      "pixel_sha256": "4a02367a50271b6c92d11daafd65b644b062566b88df39de8a1de647ffc30bc9",
+      "queries": [
+        "本月账单",
+        "字体大小"
+      ],
+      "role": "lo_res_big",
+      "scale": 0.95,
+      "sha256": "de7636beb6f09df04bb55fcea394f89fc645aeed23b7c716dc89e0b98acf365d"
+    },
+    {
+      "family_id": 5,
+      "file": "dup_0005_base.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 34,
+        "height": 204,
+        "kind": "plain",
+        "line_count": 3,
+        "width": 520
+      },
+      "lines": [
+        "文件已经发到你邮箱了",
+        "工单 19900000002 已受理",
+        "好的没问题"
+      ],
+      "pixel_sha256": "907c685f7a42e7737eabf57b87830e759621593e6a17629cde4a556bbd1b0853",
+      "queries": [
+        "文件已经",
+        "已受理",
+        "好的没问"
+      ],
+      "role": "base",
+      "scale": 1.0,
+      "sha256": "a14495b365831f760d8489b14f241b9a80ce4401aa6d487d5da5ae463c667c43"
+    },
+    {
+      "family_id": 5,
+      "file": "dup_0005_hi_res.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 34,
+        "height": 235,
+        "kind": "plain",
+        "line_count": 3,
+        "width": 598
+      },
+      "lines": [
+        "文件已经发到你邮箱了",
+        "工单 19900000002 已受理",
+        "好的没问题"
+      ],
+      "pixel_sha256": "23f1943cb28b6a0fd148a4d102bbd135d325bdfe1d57625112ba7271ab906312",
+      "queries": [
+        "文件已经",
+        "已受理",
+        "好的没问"
+      ],
+      "role": "hi_res",
+      "scale": 1.15,
+      "sha256": "a126f641a05e966f4e02b809aa16af8a02f08456469a9235fc3ae4ab3cbd6f1b"
+    },
+    {
+      "family_id": 5,
+      "file": "dup_0005_lo_res_big.bmp",
+      "format": "BMP",
+      "layout": {
+        "font_size": 34,
+        "height": 194,
+        "kind": "plain",
+        "line_count": 3,
+        "width": 494
+      },
+      "lines": [
+        "文件已经发到你邮箱了",
+        "工单 19900000002 已受理",
+        "好的没问题"
+      ],
+      "pixel_sha256": "1706082ed7d2624a33c38733239c32b6b6b2d4244b31aed4308667d9ad10688f",
+      "queries": [
+        "文件已经",
+        "已受理",
+        "好的没问"
+      ],
+      "role": "lo_res_big",
+      "scale": 0.95,
+      "sha256": "1f5b877dcb73f96713f755d2a4364e437a45217b72bfb3fc9fd68f69227aa1b6"
+    },
+    {
+      "family_id": 6,
+      "file": "dup_0006_base.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 24,
+        "height": 136,
+        "kind": "bubble_left",
+        "line_count": 2,
+        "width": 520
+      },
+      "lines": [
+        "文件已经发到你邮箱了",
+        "订单号 19900000001"
+      ],
+      "pixel_sha256": "d0f3db9ab65740eacbf5d41c1c38a6a4c9e9dbfd5acf906fc2896eff4fdca8d2",
+      "queries": [
+        "文件已经",
+        "订单号"
+      ],
+      "role": "base",
+      "scale": 1.0,
+      "sha256": "2e474949b849c85bae41e5754694346e24dd2121c864d1cea76921d968a4474d"
+    },
+    {
+      "family_id": 6,
+      "file": "dup_0006_hi_res.png",
+      "format": "PNG",
+      "layout": {
+        "font_size": 24,
+        "height": 156,
+        "kind": "bubble_left",
+        "line_count": 2,
+        "width": 598
+      },
+      "lines": [
+        "文件已经发到你邮箱了",
+        "订单号 19900000001"
+      ],
+      "pixel_sha256": "ab14b9f87dd6acc93f0b1933a205ecb8c34662039b858b6dc232d4a588e78c8f",
+      "queries": [
+        "文件已经",
+        "订单号"
+      ],
+      "role": "hi_res",
+      "scale": 1.15,
+      "sha256": "571e7ef45a15b30038843b7e5cfa13bf8f12382560a7e10601775106c46f4b88"
+    },
+    {
+      "family_id": 6,
+      "file": "dup_0006_lo_res_big.bmp",
+      "format": "BMP",
+      "layout": {
+        "font_size": 24,
+        "height": 129,
+        "kind": "bubble_left",
+        "line_count": 2,
+        "width": 494
+      },
+      "lines": [
+        "文件已经发到你邮箱了",
+        "订单号 19900000001"
+      ],
+      "pixel_sha256": "20b477410e39d78e2a9e80c5fb99c7a556e20d4a466824532aaa79a27b65b397",
+      "queries": [
+        "文件已经",
+        "订单号"
+      ],
+      "role": "lo_res_big",
+      "scale": 0.95,
+      "sha256": "a4bc3ec09caa3cf2541407db49f295be4b2f672a992223bf75f7f9c01e2197b2"
+    }
+  ],
+  "members_per_family": 3,
+  "schema": "picrecall-dupes/1",
+  "seed": 20261017,
+  "thresholds": {
+    "phash_max_distance": 8
+  }
+}

@@ -73,6 +73,50 @@ def test_dedupe_never_touches_user_files(tmp_path):
     assert before == after, "dedupe 动了用户文件"
 
 
+def test_dedupe_never_touches_user_files_with_real_groups(tmp_path):
+    """只读纪律在**真有组**时仍成立（M2 补）。
+
+    上面的测试走的是 0 组场景（合成版式各异），只证明了"空手而过时不动文件"。
+    本测试用 `bench.gen_dupes()` 造出**必然出组**的近似重复族，再断言：
+      ① 调用前后用户文件夹**文件集合 + size + mtime_ns** 逐一不变；
+      ② 确实分出了组（否则本测试又退化成"0 组"场景，失去意义）；
+      ③ 唯一写盘动作是建议清单，且该清单落在用户文件夹**之外**。
+    """
+    import os
+
+    from picrecall import bench
+
+    data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    folder = tmp_path / "shots"
+    bench.gen_dupes(str(folder), data_dir=data_dir, count=3)
+
+    def snapshot():
+        return {
+            p.name: (p.stat().st_size, p.stat().st_mtime_ns)
+            for p in folder.iterdir()
+        }
+
+    before = snapshot()
+    assert len(before) == 10  # 3 族 × 3 成员 + manifest.json
+
+    conn = db.connect(str(tmp_path / "i.db"))
+    try:
+        index.apply_scan(conn, index.scan_folder(str(folder)))
+        groups = dedupe.phash_groups(conn)
+        # ② 真有组——否则本测试没测到"有组时的只读性"
+        assert len(groups) >= 1, "样例未出组，只读断言不具针对性"
+        out = tmp_path / "suggest.csv"   # 落在 shots/ 之外
+        dedupe.write_keep_suggestions(groups, str(out))
+        assert os.path.isfile(out)
+    finally:
+        conn.close()
+
+    after = snapshot()
+    assert before == after, "有组场景下 dedupe 改了用户文件（集合/size/mtime 有变）"
+    # ③ 建议清单不得写进用户文件夹
+    assert not (folder / "suggest.csv").exists()
+
+
 def test_suggestion_priority_resolution_then_size_then_mtime(tmp_path):
     """K11：分辨率 → 大小 → mtime → 路径。"""
     members = [

@@ -75,8 +75,13 @@ picrecall stats                              # 索引库状态速览（文件数
 picrecall selftest                           # 自检：依赖探活 + 口径常量一致性
 picrecall bench gen --count 60               # 生成合成截图集 + 真值 manifest
 picrecall bench gen --check                  # 再生成一致性校验（防数据漂移）
+picrecall bench gen --dupes                  # 生成近似重复族样例（供 dedupe 端到端验证）
 picrecall bench run --data data/synthetic    # 真值对账：OCR 识别率 + 检索命中率
 ```
+
+> `bench gen --dupes` 产出 `data/synthetic_dupes/`（独立子集，**不动**主集 manifest）：
+> 每族 3 张"同内容、不同分辨率/编码"的近似图，供验证 `dedupe` 的分组与保留建议选择。
+> 该子集的构造口径与实测数字见 [`data/README.md`](data/README.md) §六。
 
 ### 中文分词主路径（可选）
 

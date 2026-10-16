@@ -199,6 +199,26 @@ def cmd_stats(args):
 
 def cmd_bench_gen(args):
     data_dir = args.data
+    if args.dupes:
+        # 近似重复族子集（M2）：默认落到 data/synthetic_dupes，与主集分开，互不影响。
+        # `--dupes` 与 `--check` 语义不兼容（`--check` 是主集的再生成对账），
+        # 组合时显式报用法错误，而不是**静默忽略**用户给的一个旗标。
+        if args.check:
+            print("错误：--dupes 与 --check 不能同时使用（--check 只对主集做再生成对账）",
+                  file=sys.stderr)
+            return config.EXIT_USAGE
+        out_dir = args.out or os.path.join(data_dir, "synthetic_dupes")
+        try:
+            manifest = bench.gen_dupes(out_dir, data_dir=data_dir, seed=args.seed,
+                                       count=args.count)
+        except (FileNotFoundError, ValueError) as exc:
+            print("错误：%s" % exc, file=sys.stderr)
+            return config.EXIT_USAGE
+        payload = {"manifest": manifest, "out_dir": os.path.abspath(out_dir), "kind": "dupes"}
+        _out(args, payload, ["近似重复族合成集已生成: %s" % os.path.abspath(out_dir),
+                            "真值 manifest: %s" % manifest])
+        return config.EXIT_OK
+
     out_dir = args.out or os.path.join(data_dir, "synthetic")
     try:
         if args.check:
@@ -326,6 +346,8 @@ def build_parser():
     bp.add_argument("--data", help="数据目录（含白名单；默认仓库 data/）")
     bp.add_argument("--seed", type=int, help="固定随机种子（默认取 config）")
     bp.add_argument("--count", type=int, help="图片数量（默认取 config）")
+    bp.add_argument("--dupes", action="store_true",
+                    help="生成近似重复族子集（供 dedupe 端到端真样例；与主集分开）")
     bp.add_argument("--check", action="store_true", help="再生成一致性校验（不覆盖）")
     bp.add_argument("--json", action="store_true", help="机读 JSON 输出")
     bp.set_defaults(func=cmd_bench_gen)

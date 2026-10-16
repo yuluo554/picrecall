@@ -31,6 +31,9 @@ BENCH_DEFAULT_THRESHOLDS = {
 }
 BENCH_SEED_DEFAULT = 20261016
 BENCH_IMAGE_COUNT_DEFAULT = 60
+# 近似重复族（M2）：独立子集，seed 与主集分开，避免互相牵动位级基准。
+BENCH_DUPES_SEED_DEFAULT = 20261017
+BENCH_DUPES_COUNT_DEFAULT = 6  # 族数；每族成员数见 bench.DUPES_MEMBERS（固定 3 张）
 
 # ── 索引库默认位置（D-11）──
 DB_FILENAME = ".picrecall.db"

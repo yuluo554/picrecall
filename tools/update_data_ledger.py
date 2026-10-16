@@ -47,6 +47,22 @@ ASSETS = [
         "privacy": "渲染文本全部来自白名单（假值）；不含真实截图",
     },
     {
+        "path": "data/synthetic_dupes/manifest.json",
+        "kind": "近似重复族真值 manifest（dedupe 端到端真样例：族→成员→应同组）",
+        "source": "生成器产出（picrecall.bench.gen_dupes，seed=20261017，count=6 族 × 3 成员）",
+        "license": "MIT（本项目）",
+        "rebuild": "python -m picrecall bench gen --dupes --data data --out data/synthetic_dupes",
+        "privacy": "渲染文本全部来自白名单（假值）；不含真实截图",
+    },
+    {
+        "path": "data/schema_notes.md",
+        "kind": "索引库 schema 与迁移口径（**只引用不复述** DDL；真源在 db.SCHEMA_SQL）",
+        "source": "手工（据 db.py/__init__.py 实况编写）",
+        "license": "MIT（本项目）",
+        "rebuild": "手工维护（schema 变更后同步更新）",
+        "privacy": "无个人数据",
+    },
+    {
         "path": "data/README.md",
         "kind": "依据查证 + 数据源可获取性 + 合成数据纪律",
         "source": "手工（含 gh api 实测记录）",
@@ -87,6 +103,38 @@ def _extra_facts(rel):
         pngs = [n for n in sorted(os.listdir(synth))
                 if n.lower().endswith(".png")] if os.path.isdir(synth) else []
         facts.append("目录内实际图片文件数（不入 git，可重建）: %d" % len(pngs))
+    elif rel == "data/synthetic_dupes/manifest.json":
+        import json
+
+        with open(abs_path, "r", encoding="utf-8") as fh:
+            m = json.load(fh)
+        facts.append("族数: %s" % m.get("family_count"))
+        facts.append("每族成员数: %s" % m.get("members_per_family"))
+        facts.append("图片数: %s" % m.get("image_count"))
+        facts.append("seed: %s" % m.get("seed"))
+        facts.append("schema: %s" % m.get("schema"))
+        facts.append("门槛: %s" % json.dumps(m.get("thresholds"), ensure_ascii=False, sort_keys=True))
+        dupes = os.path.join(REPO_ROOT, "data", "synthetic_dupes")
+        imgs = [n for n in sorted(os.listdir(dupes))
+                if n.lower().endswith((".png", ".bmp", ".jpg", ".jpeg", ".webp"))] \
+            if os.path.isdir(dupes) else []
+        facts.append("目录内实际图片文件数（不入 git，可重建）: %d" % len(imgs))
+    elif rel == "data/schema_notes.md":
+        with open(abs_path, "r", encoding="utf-8") as fh:
+            text = fh.read()
+        facts.append("是否引用真源 db.SCHEMA_SQL: %s"
+                     % ("是" if "SCHEMA_SQL" in text else "否（不合纪律）"))
+        # 只允许**正文行内引用**（如 `CREATE TABLE IF NOT EXISTS` 这类说明），
+        # 不允许**代码块里复述 DDL**——后者才是"第二份 schema 定义"。
+        ddl_blocks = 0
+        in_fence = False
+        for line in text.splitlines():
+            if line.strip().startswith("```"):
+                in_fence = not in_fence
+                continue
+            if in_fence and line.strip().upper().startswith("CREATE TABLE"):
+                ddl_blocks += 1
+        facts.append("代码块内 DDL 复述行数（应为 0）: %d" % ddl_blocks)
     return facts
 
 
@@ -156,6 +204,8 @@ def build_ledger():
     out.append("|---|---|---|")
     out.append("| `data/synthetic/*.png` | 大体积且可位级重建（seed 固定）；manifest 已登记 sha256 与 pixel_sha256 | "
                "`python -m picrecall bench gen --data data --out data/synthetic` |")
+    out.append("| `data/synthetic_dupes/*.{png,bmp}` | 同上（近似重复族样例；manifest 已登记族与指纹） | "
+               "`python -m picrecall bench gen --dupes --data data --out data/synthetic_dupes` |")
     out.append("| `*.db` / `.picrecall.db` | 索引库含用户截图 OCR 结果（隐私红线） | 运行时产出 |")
     out.append("")
     return "\n".join(out) + "\n"

@@ -41,6 +41,22 @@ def sha256_file(path):
     return h.hexdigest()
 
 
+def read_dimensions(path):
+    """读图片宽高（模块 1 契约的"尺寸"字段）。
+
+    宽容失败：读不出（坏文件/无 PIL）返回 (None, None) —— 索引不得因单张坏图中断。
+    只读用户文件，不做任何写操作。
+    """
+    try:
+        from PIL import Image
+
+        with Image.open(path) as im:
+            w, h = im.size
+        return int(w), int(h)
+    except Exception:
+        return None, None
+
+
 def scan_folder(folder, exts=None):
     """递归扫描文件夹，返回确定性排序的文件条目列表。
 
@@ -84,7 +100,7 @@ def apply_scan(conn, entries, now_ns=None):
     existing = {
         _path_key(row["path"]): dict(row)
         for row in conn.execute(
-            "SELECT id, path, size, mtime_ns, file_hash, status FROM files"
+            "SELECT id, path, size, mtime_ns, file_hash, status, width, height FROM files"
         )
     }
 
@@ -100,39 +116,55 @@ def apply_scan(conn, entries, now_ns=None):
             if row is None:
                 # 新文件：立即记录内容 hash（题目文档要求索引记录文件 hash），
                 # 否则后续"仅触摸"会被误判成内容变更。
+                w, h = read_dimensions(path)
                 conn.execute(
-                    "INSERT INTO files(path, size, mtime_ns, file_hash, status, "
-                    "first_seen_ns, last_seen_ns) VALUES (?, ?, ?, ?, 'pending', ?, ?)",
-                    (path, e["size"], e["mtime_ns"], sha256_file(path), now_ns, now_ns),
+                    "INSERT INTO files(path, size, mtime_ns, width, height, file_hash, status, "
+                    "first_seen_ns, last_seen_ns) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)",
+                    (path, e["size"], e["mtime_ns"], w, h, sha256_file(path), now_ns, now_ns),
                 )
                 added += 1
                 continue
 
             if row["size"] == e["size"] and row["mtime_ns"] == e["mtime_ns"]:
-                # 快速路径：元数据未变，不重算 hash
-                conn.execute(
-                    "UPDATE files SET last_seen_ns = ?, status = CASE "
-                    "WHEN status = 'missing' THEN 'pending' ELSE status END WHERE id = ?",
-                    (now_ns, row["id"]),
-                )
+                # 快速路径：元数据未变，不重算 hash。
+                # 例外：尺寸为 NULL 时补读一次（M2 前建的库没有该字段），补完即不再读。
+                if row["width"] is None or row["height"] is None:
+                    w, h = read_dimensions(path)
+                    conn.execute(
+                        "UPDATE files SET last_seen_ns = ?, width = ?, height = ?, status = CASE "
+                        "WHEN status = 'missing' THEN 'pending' ELSE status END WHERE id = ?",
+                        (now_ns, w, h, row["id"]),
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE files SET last_seen_ns = ?, status = CASE "
+                        "WHEN status = 'missing' THEN 'pending' ELSE status END WHERE id = ?",
+                        (now_ns, row["id"]),
+                    )
                 unchanged += 1
                 continue
 
             # 元数据变了 → 重算内容 hash 决定是"变更"还是"仅触摸"
             new_hash = sha256_file(path)
             if row["file_hash"] == new_hash:
+                w, h = (row["width"], row["height"])
+                if w is None or h is None:
+                    w, h = read_dimensions(path)
                 conn.execute(
-                    "UPDATE files SET size = ?, mtime_ns = ?, last_seen_ns = ?, "
+                    "UPDATE files SET size = ?, mtime_ns = ?, width = ?, height = ?, "
+                    "last_seen_ns = ?, "
                     "status = CASE WHEN status = 'missing' THEN 'pending' ELSE status END "
                     "WHERE id = ?",
-                    (e["size"], e["mtime_ns"], now_ns, row["id"]),
+                    (e["size"], e["mtime_ns"], w, h, now_ns, row["id"]),
                 )
                 unchanged += 1
             else:
+                w, h = read_dimensions(path)
                 conn.execute(
-                    "UPDATE files SET size = ?, mtime_ns = ?, file_hash = ?, "
+                    "UPDATE files SET size = ?, mtime_ns = ?, width = ?, height = ?, "
+                    "file_hash = ?, "
                     "status = 'pending', last_seen_ns = ?, ocr_error = NULL WHERE id = ?",
-                    (e["size"], e["mtime_ns"], new_hash, now_ns, row["id"]),
+                    (e["size"], e["mtime_ns"], w, h, new_hash, now_ns, row["id"]),
                 )
                 changed += 1
 
