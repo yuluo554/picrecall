@@ -1,0 +1,11 @@
+# 本项目：源码归一（所有文本文件统一 LF）
+* text=auto eol=lf
+
+# 二进制/图像不参与行尾归一
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.bmp binary
+*.webp binary
+*.onnx binary
+*.dll binary

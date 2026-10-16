@@ -1,0 +1,51 @@
+# picrecall 白名单文本集（合成截图渲染素材源）
+#
+# 纪律（data/README.md §三）：
+#   - 本文件是合成截图渲染用文字的**唯一来源**；生成器按固定 seed 从此抽样；
+#   - 禁止真实个人信息：号码用假号段（19900000000 类）、单号用假值、姓名用通用占位；
+#   - 一行一条；`#` 开头为注释行，生成器自动跳过；
+#   - 本文件即"假值登记处"，增删不影响既有 manifest（manifest 记录实际使用行）。
+
+# ── 聊天短句 ──
+今晚八点老地方见
+收到，明天上午给你答复
+这个方案我再改一版
+文件已经发到你邮箱了
+好的没问题
+会议改到下午三点
+路上堵车晚到十分钟
+记得带充电器
+
+# ── 报错信息 ──
+config error: timeout 3000
+Connection refused by server
+ModuleNotFoundError: No module named 'requests'
+disk quota exceeded
+invalid token at line 42
+Permission denied (publickey)
+traceback: IndexError list index out of range
+failed to bind port 8080
+
+# ── 菜单项与配置 ──
+设置 通用 高级选项
+导出为 PDF
+清除缓存并重启
+启用深色模式
+自动保存 每 5 分钟
+同步频率 手动
+显示行号
+字体大小 14
+
+# ── 金额与账单 ──
+本月账单已生成
+订单金额 128.00 元
+已支付 3000 元整
+优惠券抵扣 15 元
+余额不足请及时充值
+转账成功 尾号 6688
+
+# ── 日期与编号（假值） ──
+订单号 19900000001
+受理编号 A20261016001
+有效期至 2027 年 3 月
+工单 19900000002 已受理

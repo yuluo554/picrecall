@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "picrecall"
+version = "0.1.0"
+description = "本地截图文字检索库：对截图文件夹做 OCR 索引，按图中文字秒级搜回那张图（增量索引 + 重复截图建议）"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "yuluo554" }]
+keywords = ["ocr", "screenshot", "full-text-search", "sqlite-fts5", "local-first", "privacy"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.12",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Utilities",
+]
+dependencies = [
+  "Pillow>=9",
+  "imagehash>=4.3",
+  "numpy>=1.19.5",
+]
+
+[project.optional-dependencies]
+ocr = [
+  # 3.8 通道无 1.20+ 的 cp38 轮子（实测），故分档约束
+  "rapidocr-onnxruntime==1.4.4",
+  "onnxruntime>=1.7,<1.20; python_version < '3.9'",
+  "onnxruntime>=1.7; python_version >= '3.9'",
+]
+dev = [
+  "pytest>=7",
+  # 3.11 起 tomllib 进 stdlib；3.8 通道读 pyproject 需要 tomli（README 对账门用）
+  "tomli>=2; python_version < '3.11'",
+]
+
+[project.scripts]
+picrecall = "picrecall.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -26,6 +26,17 @@ _private/
 release/
 *.log
 
+# 本地一次性探测/冒烟工作区（阶段 0 预检、端到端实测产物；不入库）
+.probe/
+smoke/
+
+# 合成截图集原始文件不入 git（生成器可随时重建；manifest 与生成脚本入 git）
+data/synthetic/*.png
+data/synthetic/*.jpg
+data/synthetic/*.jpeg
+data/synthetic/*.bmp
+data/synthetic/*.webp
+
 # IDE / OS
 .idea/
 .vscode/

@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} · py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, python: "3.8" }
+          - { os: windows-latest, python: "3.12" }
+          - { os: ubuntu-latest,  python: "3.12" }
+    env:
+      # 编码守卫：CI 里 `python -m pytest` 不是我们敲的命令、没有 -X utf8
+      PYTHONUTF8: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install (README 快速开始同一条通路)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+
+      - name: Selftest (核心依赖通路)
+        run: python -m picrecall selftest
+
+      - name: CLI 冒烟 — 裸 console script 通路
+        run: |
+          picrecall --version
+          picrecall selftest
+
+      - name: 三条命令闭环冒烟
+        shell: bash
+        run: |
+          mkdir -p smoke/shots
+          python -c "from PIL import Image; Image.new('RGB',(200,80),'white').save('smoke/shots/a.png')"
+          picrecall index smoke/shots --db smoke/i.db
+          picrecall search hello --db smoke/i.db
+          picrecall dedupe --db smoke/i.db --out smoke/keep.csv
+
+      - name: Pytest (全量)
+        run: python -m pytest -q
+
+  test-ocr:
+    name: ${{ matrix.os }} · py${{ matrix.python }} · with OCR
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, python: "3.12" }
+          - { os: ubuntu-latest,  python: "3.12" }
+    env:
+      PYTHONUTF8: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install with OCR extra
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,ocr]"
+
+      - name: Selftest requiring OCR
+        run: python -m picrecall selftest --require-ocr
+
+      - name: 端到端 — 合成集 → 索引 → OCR → 检索 → 基准对账
+        shell: bash
+        run: |
+          python -m picrecall bench gen --data data --out smoke/synth --count 8
+          python -m picrecall index smoke/synth --db smoke/b.db
+          python -m picrecall ocr --db smoke/b.db
+          python -m picrecall search 账单 --db smoke/b.db
+          python -m picrecall bench run --db smoke/b.db --data smoke/synth
+
+      - name: 基准可证伪探活（注入缺陷必须打红）
+        shell: bash
+        run: |
+          if python -m picrecall bench run --db smoke/b.db --data smoke/synth --inject-defect ocr_drop; then
+            echo "::error::注入缺陷后基准仍然通过 = 假门"; exit 1
+          fi
+          echo "注入缺陷后基准正确报未达标"
