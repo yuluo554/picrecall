@@ -217,7 +217,7 @@ simple profile 的 5 处未召回查询（逐条登记，不掩盖）：
 
 | 资产 | 入 git | 说明 |
 |---|---|---|
-| `data/whitelist_texts.txt` | ✅ | 34 条；六场景形态齐备（聊天/报错/菜单/金额/配置/日期编号）；**PII 扫描 0 命中**（唯二 11 位数字为已登记假号段 `19900000001/2`） |
+| `data/whitelist_texts.txt` | ✅ | 34 条；六场景形态齐备（聊天/报错/菜单/金额/配置/日期编号）；**真实个人信息 0 命中**——正则扫描下唯一命中的两处 11 位数字是已登记的假号段 `19900000001` / `19900000002`（身份证/邮箱/银行卡/固话模式均 0 命中） |
 | `data/synthetic/manifest.json` | ✅ | 60 图真值；每图登记 `lines`/`queries`/`layout`/`sha256`/`pixel_sha256`；**无观测字段**（K14） |
 | `data/synthetic/*.png` | ❌ | 60 张，`.gitignore` 已覆盖（`git add -n` 实测只收 manifest + `.gitkeep`） |
 | `data/LEDGER.md` | ✅ | 台账生成物（`tools/update_data_ledger.py` 复算）；`--check` 可核验 |
@@ -232,7 +232,7 @@ simple profile 的 5 处未召回查询（逐条登记，不掩盖）：
 
 ### 八、M1 自评
 
-- **已完成**：libsimple 加载实测 + 接线（含进程中止风险的工程处置）；白名单齐备性复核（PII 0 命中）；
+- **已完成**：libsimple 加载实测 + 接线（含进程中止风险的工程处置）；白名单齐备性复核（真实个人信息 0 命中）；
   合成集 + manifest 入 git（图片不入）；`gen --check` 位级一致 + 篡改必红；台账生成物化（可复算、禁手改）；
   `data/README.md` 增补台账节与 libsimple 实测节；双解释器 **75 项**全绿。
 - **未做（留给后续里程碑）**：pHash 分组真样例（M2）、OCR 失败续跑实测（M3）、门槛标定与更大规模基准（M4）、
