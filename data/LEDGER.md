@@ -42,7 +42,6 @@
   - seed: 20261016
   - schema: picrecall-bench/1
   - 门槛: {"ocr_line_recall": 0.9, "query_recall": 0.9}
-  - 目录内实际图片文件数（不入 git，可重建）: 60
 - **`data/synthetic_dupes/manifest.json`**
   - 族数: 6
   - 每族成员数: 3
@@ -50,7 +49,6 @@
   - seed: 20261017
   - schema: picrecall-dupes/1
   - 门槛: {"phash_max_distance": 8}
-  - 目录内实际图片文件数（不入 git，可重建）: 18
 - **`data/schema_notes.md`**
   - 是否引用真源 db.SCHEMA_SQL: 是
   - 代码块内 DDL 复述行数（应为 0）: 0

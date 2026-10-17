@@ -98,11 +98,9 @@ def _extra_facts(rel):
         facts.append("seed: %s" % m.get("seed"))
         facts.append("schema: %s" % m.get("schema"))
         facts.append("门槛: %s" % json.dumps(m.get("thresholds"), ensure_ascii=False, sort_keys=True))
-        # 图片本体不入 git：登记"目录内实际存在的图数"以便对账
-        synth = os.path.join(REPO_ROOT, "data", "synthetic")
-        pngs = [n for n in sorted(os.listdir(synth))
-                if n.lower().endswith(".png")] if os.path.isdir(synth) else []
-        facts.append("目录内实际图片文件数（不入 git，可重建）: %d" % len(pngs))
+        # 图片本体不入 git（可由 seed 位级重建）：台账只登记 manifest 声明值。
+        # 不登记"目录内实际图片数"——那是环境依赖事实（作者机器有图片、干净 clone 没有），
+        # 写进去会让台账随环境漂移（M6 干净 clone 实测：--check 在 clone 必红）。
     elif rel == "data/synthetic_dupes/manifest.json":
         import json
 
@@ -114,11 +112,7 @@ def _extra_facts(rel):
         facts.append("seed: %s" % m.get("seed"))
         facts.append("schema: %s" % m.get("schema"))
         facts.append("门槛: %s" % json.dumps(m.get("thresholds"), ensure_ascii=False, sort_keys=True))
-        dupes = os.path.join(REPO_ROOT, "data", "synthetic_dupes")
-        imgs = [n for n in sorted(os.listdir(dupes))
-                if n.lower().endswith((".png", ".bmp", ".jpg", ".jpeg", ".webp"))] \
-            if os.path.isdir(dupes) else []
-        facts.append("目录内实际图片文件数（不入 git，可重建）: %d" % len(imgs))
+        # 同上：不登记环境依赖的"目录内实际图片数"（M6 干净 clone 实测教训）
     elif rel == "data/schema_notes.md":
         with open(abs_path, "r", encoding="utf-8") as fh:
             text = fh.read()
