@@ -912,3 +912,88 @@ OCR **0.9545**（105/110，严格单条 0.8909）、检索 **0.9375**（30/32，
      未做随包资源化；
   ④ 跨平台（Linux/macOS）干净安装**未实测**；
   ⑤ `simple` 的全量 bench 本轮**未重跑**（M4 数字沿用），README §主路径 只验证了命令可跑与 profile 校验。
+## M6（2026-10-17）：发布（GitHub 公开仓库 + tag + Release）
+
+> 本节为**增量追加**，不覆盖 M0–M5 章节。
+> 上一棒待办出处：`plan/HANDOFF-M6.md` §二；出口判据：同文件 §五 DoD checklist。
+
+### 一、脱敏四步 + 全历史扫描 + 产物扫描
+
+**脱敏扫描**（当前树 + **全历史 131 个 blob** 双通道；扫描器 `smoke/m6/scan_secrets.py`）：
+
+| 模式 | 结果 | 处置 |
+|---|---|---|
+| 盘符绝对路径 | 树 1 处（`C:\Windows\Fonts` 系统字体目录，属功能性代码）+ 历史若干处（`C:\...Python38` 掩码形态、`D:\tmp` 教学示例） | 掩码形态与示例改为中性表述（如"安装于用户目录""当前盘符根下"）；`C:\Windows\Fonts` 保留（跨平台字体发现需要） |
+| 凭据（ghp/AKIA/PRIVATE KEY/xox） | **0 命中**（树 + 全历史） | — |
+| 用户名/机器形态（ASUS//Users//home/AppData） | **0 命中** | — |
+| 邮箱 | **0 命中** | — |
+| 品牌/系列词（skill/sprint/ai-tool-project-sprint/"模拟"） | 树 20 处 + 历史 112 处 | 方向级化（"skill 验收门"→"验收门"等 12 处改写）；全历史含旧 blob——**诚实登记**：旧措辞仍在 git 历史对象里，但均为流程纪律词（非敏感凭据），重新建库的成本/收益判为不值 |
+| `_private/`、`release/` | 不存在（`.gitignore` 有条目） | — |
+| 品牌/姊妹项目 | 0 命中（仅 D-9 政策声明自身） | — |
+
+**产物扫描**（`python -m build` 出 wheel 51,887B + sdist 89,403B，解包逐项查）：
+
+| 项 | 结果 |
+|---|---|
+| 网络代码（import socket/urllib/http/requests、urlopen 等） | **0 命中**（wheel + sdist 全部 .py） |
+| `*.db` 索引库 / 图片（png/jpg/bmp/webp） | **0 个** |
+| 盘符绝对路径 / 凭据 / `_private` | **0 命中** |
+| `plan/`、`data/` 目录泄入产物 | **无**（sdist 只含 src/tests/metadata；源码 docstring 对 plan 文档的**引用文字**不算泄入） |
+
+### 二、第三方依赖网络行为审计（M5 挂账的另一半，四层定案）
+
+| 层 | 方法 | 结果 |
+|---|---|---|
+| ① 本项目源码 | M5 代码审计 | 0 网络能力 import / 0 URL 常量（沿用） |
+| ② 发布产物 | 本轮 wheel/sdist 扫描 | 0 网络代码路径 |
+| ③ **动态全流程** | socket 拦截（`sitecustomize` 打补丁 `socket.connect`/`connect_ex`/`create_connection` → 记录并抛 OSError）+ `getaddrinfo` DNS 记录 + netstat 按 PID 采样旁证；**10 条命令**（selftest / gen / gen --check / gen --dupes / index / ocr(真) / search / dedupe / stats / bench run(真)）子进程形态全跑 | **0 次 BLOCKED、0 次 DNS、0 条 netstat 命中连接**；全部退出码符合契约（0/1） |
+| ④ **实际加载面静态** | 单进程直调全流程后导出 `sys.modules`（634 模块、第三方 458 文件）→ 全文扫描网络调用模式 | 唯一命中：`numpy.lib._datasource`（`np.loadtxt` 的远程 URL 支持）——**加载面而非调用面**，拦截环境全程未触发 |
+
+**结论（README 隐私声明定案）**："运行期零网络调用"**保留**，并在 README 补记四层审计范围——
+不做无据承诺，也不把"numpy 数据源加载器存在远程能力"夸成"会出网"。
+
+### 三、干净 clone 复核 + CI 首推对账（run id 据实补记）
+
+**干净 clone（本地图 + GitHub 图，三clone 两轮）**：`git clone` 新目录 → venv →
+`pip install -r requirements.txt`（升 pip）→ README 快速开始四条命令 + `bench gen --check` +
+dupes 出组（6 组）+ `bench run` 达标（0.9545/0.9375）→ 全量 pytest **155/156 passed + 2 skipped**。
+GitHub clone（SSH 通路）58 文件齐全、manifest/whitelist/ci.yml 在位、LF 归一正常。
+
+**暴露并修复 2 处 clone-only 缺陷（D-24/D-25，见 plan/06 §三）**：台账环境依赖事实行、
+dupes manifest 裸 KeyError。修复后干净 clone 全绿。
+
+**CI 对账（3 次 push → 3 次 run，一一对应）**：
+
+| run | 触发 commit | 结果 | 诊断/处置 |
+|---|---|---|---|
+| 38993403693 | 8c7e940（首推） | failure（2/7） | ubuntu 大小写测试不合 ext4 语义（D-26 ③）；ubuntu OCR 0.2143（CJK 字体缺席） |
+| 38993956058 | 40e21a4 | failure（2/7） | ubuntu 仍 0.2143（runner 根本无 CJK 字体可寻）→ CI 装 fonts-noto-cjk；windows OCR 0.8571（8 图 14 行样本波动）→ count 8→24 |
+| **38994228988** | 66e193c | **success（7/7 全绿）** | ubuntu OCR 0.9111/0.9231 达标、注入缺陷正确打红（可证伪在 Linux 成立）、`gen --check` 编码器差异标注不误报（D-16 在 Linux 如期成立） |
+
+**跨平台复核结论**：① pHash 分组真样例测试在 ubuntu 绿（族内 ≤8 的构造锁跨平台成立，未漂移）；② single-char 探针 `检索命中=True`（Linux CJK 识别可用）；③ `simple` 全量 bench 发布前复跑 0.9545/0.8438（与 M4 逐项一致，达标）。
+
+### 四、tag + Release + 台账末态
+
+- tag **v0.1.0**（与 `__version__` 一致）+ Release（notes：首期能力 + 已知边界——不做 exe、
+  不做语义检索、`simple` 可选主路径、非可编辑安装数据目录落空、近似重复形态覆盖面、缩略图/HTML 留扩展）。
+- plan/00 承诺-证据台账**末态回填**：逐项 ✅；🟡"纯本地零上传"经四层审计**改判 ✅**（本文件 §二）。
+- 推送通路备注：本机 github.com:443 间歇不可达、SSH:22 稳定 → remote 用 SSH（`git@github.com:yuluo554/picrecall.git`）。
+
+### 五、不可本机实跑的通路（M6 后余量，如实登记）
+
+| 通路 | 现状 |
+|---|---|
+| macOS（本地 + CI） | **未覆盖**（CI 矩阵无 macos；libsimple osx 预编译件未实测）——如实登记为缺口 |
+| 真实用户截图的全流程 | 持续以合成集代替（隐私红线） |
+| 简单并发场景 | 单进程验证（沿用 M3/M4 登记） |
+
+### 六、M6 自评
+
+- **已完成**：脱敏四步 + 全历史 blob 扫描；四层隐私审计（源码/产物/动态拦截/加载面静态）；
+  wheel/sdist 产物扫描；干净 clone 两轮复核（暴露并修复 D-24/D-25）；GitHub 公开仓库创建 + 首推；
+  CI 三轮诊断到全绿（**真实 run id 已补记**，D-10 尾注闭环）；pHash/Linux OCR/编码器差异三项跨平台复核；
+  simple 全量 bench 发布前复跑（与 M4 一致）；tag v0.1.0 + Release；plan/00·06 台账末态回填 + verify 本节。
+- **诚实口径**：① git 历史对象里仍有早期品牌词措辞（非敏感，重建历史判为不值，已登记）；
+  ② macOS 未覆盖；③ `C:\Windows\Fonts` 为功能性系统路径保留在源码；
+  ④ CI 的 `gen --check --count 8`（requirements 入口作业）与全量 pytest 在 windows-3.8 上无 OCR，
+  OCR 类探针按声明降级——非缺陷。
