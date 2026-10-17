@@ -719,3 +719,196 @@ M0–M3 的 K1–K19 全部仍然有效。M4 **未新增 K 编号**，对 **K14*
   ④ `simple` 门槛 0.80 是**按词级语义定标**（依据已逐条列明于 §二），
      但**词级路径的真实召回上限是否就是 0.8438** 只在 60 图合成集上实测——真实截图下
      该门槛是否合适**未实测**（如实登记为缺口，不做无据声明）。
+
+## M5（2026-10-17）：交付面（README / 测试 / 干净环境）
+
+> 本节为**增量追加**，不覆盖 M0–M4 章节（上文 §M0 一–七、§M1 一–八、§M2 一–八、§M3 一–八、§M4 一–八）。
+> 上一棒待办出处：`plan/HANDOFF-M5.md` §二；出口判据：同文件 §五 DoD checklist。
+
+### 一、干净 venv 照 README 逐条实测：暴露 6 处交付面缺陷（本棒最重要的实缺口）
+
+**做法**：**另起干净 venv**（`/tmp/picrecall-m5/*`，不复用本机 `.venv` 与既有 3.8 环境），
+严格照 README §安装 / §快速开始 / §其它命令 / §主路径 / §基准 的原文逐条执行、逐条记退出码。
+
+**结果**：**6 处缺陷**，**全部只在"干净环境照抄 README"时显形**——本机既有环境
+（pip 早已升级、处处显式 `--db`/`--data`、extras 安装）把它们长期掩盖，M0–M4 的留档因此从未报警。
+
+| # | 缺陷 | 实测证据（干净环境） | 为何 M0–M4 未显形 |
+|---|---|---|---|
+| D1 | `pip install -r requirements.txt` **只装依赖、不装项目本身** | 装完 `Scripts/` 里**没有** `picrecall`；`python -m picrecall selftest` → `No module named picrecall`（exit 1）；`import picrecall` 在仓库根与别处**均**失败 | 本机一直走 `pip install -e ".[dev,ocr]"`（extras 路径），从没单独跑过 `-r requirements.txt`。**题目文档 §四 ① 指定的入口恰是这条** |
+| D2 | README §快速开始四条命令 **`--db` 落点不一致** | `index "<folder>"` 把库写进**被扫描文件夹**；随后的裸 `ocr` 读**当前目录** → `错误：索引库不存在`（**exit 2**），照抄第二条即断 | M0–M4 的留档命令**处处显式 `--db`**（`index <dir> --db <db>`），缺省落点差异从未被触发 |
+| D3 | `bench gen` 的三种 README 形态**从不取默认数据目录** | `bench gen --count 60`／`--check`／`--dupes` 三种（均不传 `--data`/`--out`）**全部**：`os.path.join(None, "synthetic")` → 裸 `TypeError` + **exit 1**（非声明的任何语义） | 留档一律写 `--data data --out data/synthetic`，`args.data is None` 的分支从未走到 |
+| D4 | `bench run` 数据目录/manifest 缺席时**裸抛异常** | `FileNotFoundError` 冒到顶层 → traceback + exit 1；按 K9 应属**用法/输入错误 = exit 2** | 留档都传了存在的 `--data`，缺席分支从未走到 |
+| D5 | **3.8.8 自带 pip 20.2.3 不支持 pyproject-only 可编辑安装** | 干净 3.8 venv：`pip install -e ".[dev]"` → `ERROR: File "setup.py" not found ... editable mode currently requires a setup.py based build`（**exit 1**）；`-r requirements.txt`（含 `-e .`）**同样**失败 | 本机 3.8 环境的 pip 早已是 25.0.1（实测），故 M0–M4 的 3.8 通道从未见过该错 |
+| D6 | plan/04 §2.1/§2.3 **文档面与 CLI 实况不符** | §2.1 闭环命令缺 `--db`（同 D2）；§2.3 把 `--quiet` 列为全局旗标而 **CLI 从未定义**（`quiet` 只是 `bench` 的内部函数参数）；`--profile`/`--threshold` 漏写 | 测试只对账 README ↔ CLI，**plan/04 未被任何门覆盖** |
+
+**处置（逐条可核）**：
+
+| # | 处置 | 落点 |
+|---|---|---|
+| D1 | `requirements.txt` 末尾加 `-e .`（**自指本项目**），并注明"用可编辑安装以保住默认数据目录" | `requirements.txt` |
+| D2 | README §快速开始四条命令**一律显式 `--db shots.db`**，并说明缺省落点差异（`index` 在文件夹内、其余在当前目录）；plan/04 §2.1 同步 | `README.md`、`plan/04` |
+| D3 | `cmd_bench_gen` 经 `bench.require_data_dir(args.data)` 解析生效数据目录（显式优先、否则默认；目录不存在即报可照做的错 → **exit 2**） | `cli.py`、`bench.py` |
+| D4 | `cmd_bench_run` 捕获 `FileNotFoundError` → **exit 2**（用法/输入错误，非"检出问题"） | `cli.py` |
+| D5 | README §安装**首行**加 `python -m pip install --upgrade pip` 并说明原因（PEP 660 / pip 20.2.3） | `README.md` |
+| D6 | 按 `cli.build_parser()` 实况校正 §2.1 命令表与 §2.3 全局旗标（删 `--quiet`、补 `--profile`/`--threshold`） | `plan/04` |
+
+**同轮一并清理（M5 实测发现的小口径漂移）**：
+
+- `selftest.data_dir_default()` 是 `bench._default_data_dir()` 的**第二份实现且零调用方**（死代码 + 漂移面）
+  → 改为委派 `bench.default_data_dir()`，实现单一来源；`selftest` 随之不再需要 `import os`。
+- README §能力表把兜底路径写成"逐字 **ngram** 兜底"——与 D-7 明确**否决**过的 trigram 易混，
+  → 改为"CJK 逐字切分兜底"（与 §中文分词主路径 的"逐字切分 + unicode61"一致）。
+- README §真值基准只说"按 profile 分设"却不给数值 → 补上 `char` 0.90/0.90、`simple` 0.90/0.80，
+  使"**不并存两套默认**"这条口径在 README 里可见（M4 定案口径未改）。
+- CI 的安装步骤注释写"README 快速开始同一条通路"，实际跑的是 extras 路径 → 注释纠正为
+  "extras 通路"，并**新增 `test-requirements-entry` 作业**在干净 venv 里只跑
+  `pip install -r requirements.txt` 再验入口与闭环（题目文档 §四 ① 的真入口）。
+
+### 二、干净环境实测：两条安装路径 × 两种入口（复核 M1 挂账）
+
+| 安装路径 | 干净 venv | 实测 | 判定 |
+|---|---|---|---|
+| `pip install -r requirements.txt` | 3.12（干净） | exit 0；`Scripts/picrecall.exe` 已生成；`picrecall --version` → `picrecall 0.1.0`（exit 0）；`python -m picrecall --version` → exit 0 | ✅ **两种入口均通（D1 修复后）** |
+| `pip install -e ".[dev,ocr]"` | 3.12（干净） | exit 0；console script 入口 exit 0；selftest 四项全 ok（含 `ocr: OCR 引擎已加载: RapidOCR`） | ✅ |
+| `pip install -e ".[dev]"` | 3.8（干净） | **先升 pip** → exit 0；`import picrecall` 指向源码树；selftest 三项 ok + `[!!] ocr`（OCR 缺席）→ **exit 0**（符合声明：OCR 缺席仅警告） | ✅ |
+| `pip install -r requirements.txt` | 3.8（干净） | **不升 pip → exit 1（D5）**；升 pip 后 → exit 0，且 `picrecall.exe` 已生成 | ✅ **D5 已实测修复** |
+
+**干净 3.8 venv 的两条 pip 记录（D5 的完整证据）**：
+`pip 20.2.3`（3.8.8 自带）→ `-e` 安装 exit 1；升到 `pip 25.0.1` 后同一命令 exit 0。
+
+**M1 挂账的"非可编辑安装下数据目录落空"（M1 §四 第 11 条）——本轮收口**：
+
+| 安装形态 | `bench.default_data_dir()` 实测值 | `bench gen`（不传 `--data`）实测 |
+|---|---|---|
+| 可编辑（`-e .`，两条 README 路径都是它） | `<仓库>/data`（**存在**） | exit 0，正常生成 |
+| 非可编辑（`pip install .`） | `<venv>/Lib/data`（**不存在**，包被复制进 site-packages） | **exit 2 + 可照做的错**：`数据目录不存在: …（未显式传 --data 时按包路径推导；非可编辑安装会落空）——请显式指定仓库内的数据目录: --data <仓库>/data` |
+
+**处置与边界（如实声明）**：本轮**不**把 `data/` 改成随包资源（`importlib.resources`）——
+那会改变发布物构成（是否把 60 图合成集/白名单打进 wheel），属 M6 发布范围；
+改为**显式报错 + 提示 `--data`**（exit 2，非裸崩），并在 README §安装 用一段"安装形态说明"写明。
+非可编辑安装**不是 README 提供的路径**，故该形态下 README 指令仍全部可跑（都走 `-e`）。
+
+### 三、命令逐条执行与退出码语义（本地等价校验）
+
+**干净 venv（3.12，`pip install -r requirements.txt` 单路径安装；命令用生成的 console script）**：
+
+| # | 命令 | 实测结果 | 判定 |
+|---|---|---|---|
+| 1 | `picrecall --version` / `python -m picrecall --version` | 均 `picrecall 0.1.0`；exit 0 | ✅ 两种入口（M5 DoD ②） |
+| 2 | `picrecall index <60 图夹> --db m5ck.db` | 新增 60 / 变更 0；exit 0 | ✅ |
+| 3 | `picrecall ocr --db m5ck.db --limit 3`（**真 OCR**） | 成功 3 / 失败 0；exit 0 | ✅ |
+| 4 | `picrecall search "账单" --db m5ck.db` | 命中 1 条，片段为原文 `本月[账单]已生成`；exit 0 | ✅ |
+| 5 | `picrecall dedupe --db m5ck.db --out keep.csv` | 0 组；exit 0（合法空结果，K8） | ✅ |
+| 6 | `picrecall bench gen --check`（**不传 `--data`/`--out`**） | "再生成一致（60 张图，sha256 逐一比对通过）"；exit 0 | ✅ **D3 修复后** |
+| 7 | `picrecall bench gen --count 60`（同上，走默认数据目录） | 生成 `<仓库>/data/synthetic`；exit 0 | ✅ **D3 修复后** |
+| 8 | `picrecall bench gen --check`（再生成后复跑） | 再生成一致；exit 0 | ✅ 生成**确定性**未变 |
+| 9 | `picrecall bench gen --dupes`（同上） | 生成 `<仓库>/data/synthetic_dupes`；exit 0 | ✅ **D3 修复后** |
+| 10 | `picrecall stats --db m5ck.db` | 文件总数 60（已识别 3）、`{"indexed":3,"pending":57}`；exit 0 | ✅ |
+| 11 | `picrecall selftest` | 四项探活全 ok（含 OCR 已加载）；exit 0 | ✅ |
+| 12 | `picrecall index <夹> --db m5simple.db --profile simple`（**真 DLL**） | 新增 60；exit 0；库记 `profile=simple` | ✅ §主路径 |
+| 13 | `picrecall ocr --db m5simple.db --limit 2` | 成功 2；exit 0 | ✅ |
+| 14 | `picrecall search "账单" --db m5simple.db`（profile 一致） | 命中 1 条；exit 0 | ✅ |
+| 15 | `picrecall search "账单" --db m5simple.db --profile char`（**不匹配**） | `错误：分词 profile 与索引库不匹配（库=simple，请求=char）`；**exit 2** | ✅ 与 README §退出码声明一致（K6） |
+| 16 | `picrecall index data/synthetic --db m5bench.db` | 新增 60；exit 0 | ✅ §基准 |
+| 17 | `picrecall ocr --db m5bench.db`（**60 图真 OCR**） | 成功 60 / 失败 0；exit 0 | ✅ |
+| 18 | `picrecall search "账单" --db m5bench.db` | **命中 5 条**（img_0001/0022/0027/0055/0059），片段为原文；exit 0 | ✅ |
+| 19 | `picrecall bench run --db m5bench.db --data data/synthetic` | 样本层 **0.9545 / 0.9375** 达标、规则层 7 项探针全绿、`passed=True`；exit 0 | ✅ 干净环境复现 M4 数字 |
+| 20 | `picrecall bench run … --inject-defect ocr_drop` | **exit 1**（未达标） | ✅ 干净环境仍可证伪 |
+| 21 | 第 6–9 步之后再核对**入仓真值** | 主集与 dupes 的 `manifest.json` **逐字节未变**（`cmp` 一致）；`git status` 无 `data/` 改动 | ✅ 生成确定性未破坏 D-18 红线 |
+| 22 | `tools/update_data_ledger.py --check` | "台账一致"；exit 0 | ✅ 数据资产零变动 |
+
+**干净 venv 下的基准复算（`bench run --json`，真 OCR 结果）**：
+`profile=char`、`effective_thresholds={"ocr_line_recall":0.9,"query_recall":0.9}`、
+OCR **0.9545**（105/110，严格单条 0.8909）、检索 **0.9375**（30/32，误召回 0）、
+规则层 `passed=True`（7 项）、`sample_passed=True`、`passed=True`。
+
+### 四、守门变异验证（"弄坏被测行为 → 门必须变红"）
+
+本轮**逐项注入 → 复跑 → 复原 → 复跑**，全部实测（注入用文本替换，复原后 `grep -rn MUTATION` 0 命中）：
+
+| # | 变异（改被测行为） | 期望 | 实测 |
+|---|---|---|---|
+| M1 | `requirements.txt` 删掉 `-e .`（回到"只装依赖"） | 安装面门红 | ✅ FAILED（"未自指本项目（缺 `-e .`）"） |
+| M2 | README 快速开始的 `ocr` 行删掉 `--db shots.db`（回到 D2 原形） | 同一库门 + 逐条真跑门**双红** | ✅ FAILED ×2；逐条真跑复现原缺陷：`exit=[0, 2, 0, 1]` |
+| M3 | `cmd_bench_gen` 恢复 `data_dir = args.data`（回到 D3 原形） | 默认数据目录 4 项门全红 | ✅ FAILED ×4（`TypeError: expected str … not NoneType`） |
+| M4 | `cmd_bench_run` 去掉 `except FileNotFoundError`（回到 D4 原形） | exit 2 门红 | ✅ FAILED（`FileNotFoundError` 冒到测试） |
+| M5 | README 的一条 `picrecall` 行加假旗标 `--frobnicate` | README↔CLI 旗标门红 | ✅ FAILED |
+
+> 共 **5 项**新增变异逐项实测。**另修一处门的假红**：README §安装 新增
+> `python -m pip install --upgrade pip` 后，原 `_readme_flags()` 把**全文**所有 `--flag`
+> 都当 picrecall 旗标，于是 `--upgrade` 被判成"README 提到但 CLI 不存在的旗标" → **假红**。
+> 已把该函数改为**按行分域**：围栏代码块里**只看调用了 picrecall 的行**，正文照旧全文扫。
+> 改完 M5 变异仍必红（说明"分域"没有把牙齿磨掉）。
+
+### 五、三面交叉对账：测试面 = 安装面 = README 指令面（M5 DoD ②）
+
+| 面 | 取证方式 | 实测结果 |
+|---|---|---|
+| **测试面** | 干净 venv 全量 `pytest`（3.12 与 3.8 各一） | **155 passed + 2 skipped**（不带 DLL）／**157 passed**（指向实测 DLL）——**两解释器收集面一致** |
+| **安装面** | 干净 venv × 两条 README 安装路径 × 两种入口（§二） | 四条组合全部 exit 0（3.8 需先升 pip，见 D5）；两种入口（console script / `-m`）均可跑 |
+| **README 指令面** | 干净 venv **逐条真跑** README §安装/§快速开始/§其它命令/§主路径/§基准（§三） | 22 条逐条通过；唯一非 0 是**声明的** exit 2（profile 不匹配）与 exit 1（注入缺陷必打红） |
+
+**差异登记（如实）**：
+
+| 差异 | 性质 | 处置 |
+|---|---|---|
+| `-r requirements.txt` 装完**没有** CLI（D1） | **真缺陷**（题目文档 §四 ① 的真入口不成立） | 已修（`-e .`）+ 加门（K20-①）+ CI 新作业 |
+| README 闭环命令落点不一致（D2） | **真缺陷**（照抄跑不通） | 已修 + 加门（K20-②） |
+| README 有指令**未被测试覆盖**：`bench gen` 的默认数据目录形态（D3）、`bench run` 的缺席分支（D4） | **真缺口**（文档面有、测试面无） | 已修 + 补 5 项测试（K20-③） |
+| plan/04 §2.1/§2.3 与 CLI 不符（D6） | **真缺陷**（文档面自相矛盾） | 已按 `build_parser()` 校正（plan/04 未设反射门，列入缺口见 §七） |
+| CI 注释声称"README 同一条通路"但跑的是 extras | **表述失真** | 注释纠正 + 新增真入口作业 |
+| README §开发 写 `python -m pytest -q`，实跑被 `addopts=-q` 叠加成 `-qq`（pytest 9 下不打印汇总行） | **观测口径**（退出码与结果不受影响） | 不改 README（命令本身正确）；本轮取证统一用 `-o addopts="" -q` 读汇总，如实登记以免两类数字互相打架 |
+
+**测试面新增 10 项（K20 守门）**：`tests/test_readme_gate.py` 3 项
+（自指项目 / 同一 `--db` / **逐条真跑子进程**）+ `tests/test_cli_contract.py` 5 项
+（三种默认数据目录形态 / 缺省目录落空 exit 2 / `bench run` 缺席 exit 2）+ 2 项 README 块结构断言。
+
+### 六、README 隐私声明与模型说明逐条复核（M5 DoD ④）
+
+| README 声明 | 复核方式（本轮实测） | 判定 |
+|---|---|---|
+| "运行期**零网络调用**" | `src/picrecall/` 审计：网络能力 import（`requests`/`urllib`/`http`/`socket`/`smtplib`/`ftplib`/`telnetlib`/`xmlrpc`/`aiohttp`/`httpx`/`websocket`）**0 命中**；URL 常量、`urlopen`、`urlretrieve`、`.download` **0 命中**（唯一 `connect(` 命中皆为 `sqlite3.connect`） | ✅ **本项目代码成立**（边界见下） |
+| "零上传、零遥测" | 无服务端、无账号、无上报代码（同上审计 + 全库无 telemetry 相关标识符） | ✅ |
+| "**索引库不入 git**" | `.gitignore` 实测含 `*.db`/`*.sqlite`/`*.sqlite3`；本轮 20+ 条命令生成的库均未进 `git status` | ✅ |
+| "**默认只读**，没有任何删除用户文件的代码路径" | M2 已锁 AST 守门（`tests/test_dedupe_readonly.py`，含 `import os as _o; _o.remove` 别名绕过变异） | ✅（M2 留档） |
+| "OCR 模型**随 pip 包自带**（det/rec/cls 三个 onnx，共约 15MB），**首次运行不需要额外下载**"（D-6 勘误） | 实测 wheel 内 `models/`：`ch_PP-OCRv4_det_infer.onnx` **4.53MB** + `ch_PP-OCRv4_rec_infer.onnx` **10.35MB** + `ch_ppocr_mobile_v2.0_cls_infer.onnx` **0.56MB** = **15.4MB**；无运行期下载代码路径 | ✅ **D-6 勘误成立，README 表述准确** |
+| D-7 勘误（兜底 = **逐字切分 + unicode61**，**非** trigram）在 README 有对应表述 | §中文分词主路径 原文即"CJK 逐字切分 + unicode61"；§能力表本轮由"逐字 ngram 兜底"改为"CJK 逐字切分兜底"（"ngram"易与被否决的 trigram 混淆） | ✅ **本轮修正后一致** |
+| M4 新增口径已同步（分 profile 门槛 / 规则驱动层） | §真值基准 已写双层与 `thresholds_by_profile`，本轮**补上具体数值**（`char` 0.90/0.90、`simple` 0.90/0.80）使"不并存两套默认"可见 | ✅ **本轮补齐** |
+
+> **隐私声明的诚实边界（不许无据承诺）**：本轮审计覆盖的是**本项目源码**
+> （`src/picrecall/` 全部模块）——**未**审计第三方依赖
+> （`rapidocr-onnxruntime`/`onnxruntime`/`Pillow`/`imagehash`/`numpy`）的运行期网络行为，
+> **未**做发布产物扫描。因此 README 的"零网络调用"**只能说"本项目代码无网络调用路径"**，
+> 不能说"整条链路已被证明不出网"。该边界已同步到 `plan/06` §六 台账（状态标 🟡），
+> 产物扫描与依赖网络行为审计**留 M6**。
+
+### 七、不可本机实跑的通路（显式标注）
+
+| 通路 | 为何本机跑不了 | 处置 |
+|---|---|---|
+| CI 三矩阵 + 本轮新增的 `test-requirements-entry` 作业 | **仍无远端**（`git remote -v` 空），workflow 从未执行 | 结论继续写"本地等价校验（未接远端，CI 待首推验证）"；新作业**已接线但同样未跑过**，M6 首推后据实补记 run id |
+| Linux / macOS 上的干净安装 | 本机只有 Windows | 3.8/3.12 双解释器已在 Windows 实测；跨平台待 CI 首推 |
+| 非可编辑安装（`pip install .`）的"随包数据目录" | 本轮**不**改发布物构成（属 M6 范围），故该形态下 `bench` 缺省数据目录仍会落空 | 已改为**显式报错 + 提示 `--data`**（exit 2）+ README 明示；随包资源化如实登记为缺口，留 M6 |
+| 真实截图集下的 README 全流程 | 真实截图涉隐私、不入库 | 用合成集（60 图）代替；真实形态缺口同 M2/M4 登记 |
+| `simple` profile 的完整 60 图 `bench run` | 需再跑约 4.5 分钟真 OCR，而 M4 已完整留档（0.8438 / 门槛 0.80 达标） | 本轮只复核 §主路径 的 `index --profile simple`/`search`/profile 不匹配 exit 2；**未重跑** simple 的全量 bench（如实登记，不冒充已复验） |
+| `plan/04` 的反射对账门 | 现有门只覆盖 README ↔ CLI | **列入缺口**：plan/04 §2.1/§2.3 与 CLI 的一致性靠**人工校正**维持，无自动门。若 M6 想收紧，可把 `_readme_flags` 那套按行分域逻辑推广到 plan/04 |
+
+### 八、M5 自评
+
+- **已完成**：**干净 venv 照 README 逐条实测**（两条安装路径 × 两种入口 × 22 条命令，
+  逐条记退出码，与 §退出码语义表逐条对齐）；**三面交叉对账**（测试面 155+2skip / 157，
+  安装面四组合，README 指令面 22 条，差异 6 项逐条登记并处置）；**暴露并修复 6 处交付面缺陷**
+  （D1 安装入口不自指项目、D2 闭环命令落点不一致、D3 默认数据目录从不生效、
+  D4 缺席裸崩、D5 3.8 旧 pip 装不上、D6 plan/04 与 CLI 不符）；
+  **新增 K20 交付面口径 + 10 项守门测试 + 5 项变异实测**；
+  **README 隐私与模型说明逐条复核**（代码审计 0 命中、模型 15.4MB 实测、D-6/D-7/M4 口径齐备）；
+  `plan/verify/README.md` 追加本节；plan/00·04·05·06 状态回写；CI 新增真入口作业。
+- **未做（留给后续里程碑）**：发布（M6）——脱敏四步、产物扫描、干净 clone、CI 首推、tag + Release。
+- **诚实口径**：
+  ① CI 仍未跑过（无远端），本轮新增的 `test-requirements-entry` 作业**同样未跑过**；
+  ② 隐私"零网络调用"的审计范围**仅限本项目源码**，第三方依赖网络行为与发布产物扫描**未做**（留 M6）；
+  ③ 非可编辑安装（`pip install .`）的数据目录落空**仍是结构性缺口**，本轮只做到"显式报错"，
+     未做随包资源化；
+  ④ 跨平台（Linux/macOS）干净安装**未实测**；
+  ⑤ `simple` 的全量 bench 本轮**未重跑**（M4 数字沿用），README §主路径 只验证了命令可跑与 profile 校验。

@@ -4,7 +4,6 @@
 依赖缺失走 exit 3 契约（不抛裸异常）。
 """
 
-import os
 import sys
 
 from . import SCHEMA_VERSION, __version__, config
@@ -98,6 +97,11 @@ def run_selftest(require_ocr=False):
 
 
 def data_dir_default():
-    return os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"
-    )
+    """默认数据目录（唯一实现在 `bench.default_data_dir`，此处为薄封装）。
+
+    M5 实测：本函数此前是 `bench` 同款推导的**第二份实现且零调用方**——
+    两份推导一旦漂移，自检与基准会各说各话。改为委派，消除该漂移面。
+    """
+    from .bench import default_data_dir
+
+    return default_data_dir()

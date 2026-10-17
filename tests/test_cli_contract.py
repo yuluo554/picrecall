@@ -163,3 +163,98 @@ def test_bench_gen_dupes_is_deterministic(tmp_path):
     with open(str(b / "manifest.json"), "rb") as fh:
         second = fh.read()
     assert first == second
+
+
+# ── M5：默认数据目录与"照抄 README 能跑"（K9 契约 + 交付面）──────────────────
+
+def _seed_data_dir(tmp_path):
+    """造一个最小可用数据目录（只要白名单，`bench gen` 就够用）。"""
+    import shutil
+
+    src = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(exist_ok=True)
+    shutil.copy(os.path.join(src, "whitelist_texts.txt"),
+                str(data_dir / "whitelist_texts.txt"))
+    return str(data_dir)
+
+
+def test_bench_gen_without_data_and_out_uses_default_data_dir(tmp_path, monkeypatch):
+    """README §其它命令 里 `bench gen --count 60` 这种**不传 --data/--out** 的形态：
+    必须落到默认数据目录，而不是因为 `args.data is None` 裸崩。
+
+    M5 实测缺陷：`cmd_bench_gen` 直接把 `args.data` 传下去，`os.path.join(None, "synthetic")`
+    抛裸 `TypeError` → **traceback + exit 1**（并非声明的任何语义）。README 的三条
+    `bench gen`（`--count 60` / `--check` / `--dupes`）全都命中，属交付面硬伤。
+    """
+    from picrecall import bench
+
+    data_dir = _seed_data_dir(tmp_path)
+    monkeypatch.setattr(bench, "default_data_dir", lambda: data_dir)
+
+    assert _run(["bench", "gen", "--count", "2"]) == config.EXIT_OK
+    out = tmp_path / "data" / "synthetic"
+    assert (out / "manifest.json").is_file()
+    assert len(list(out.glob("*.png"))) == 2
+
+
+def test_bench_gen_check_without_data_and_out_uses_default_data_dir(tmp_path, monkeypatch):
+    """`bench gen --check` 同形（README §其它命令 第二条）。"""
+    from picrecall import bench
+
+    data_dir = _seed_data_dir(tmp_path)
+    monkeypatch.setattr(bench, "default_data_dir", lambda: data_dir)
+
+    assert _run(["bench", "gen", "--count", "2"]) == config.EXIT_OK
+    assert _run(["bench", "gen", "--check", "--count", "2"]) == config.EXIT_OK
+
+
+def test_bench_gen_dupes_without_data_and_out_uses_default_data_dir(tmp_path, monkeypatch):
+    """`bench gen --dupes` 同形（README §其它命令 第三条）。"""
+    import json
+
+    from picrecall import bench
+
+    data_dir = _seed_data_dir(tmp_path)
+    monkeypatch.setattr(bench, "default_data_dir", lambda: data_dir)
+
+    assert _run(["bench", "gen", "--dupes", "--count", "2"]) == config.EXIT_OK
+    with open(str(tmp_path / "data" / "synthetic_dupes" / "manifest.json"),
+              "r", encoding="utf-8") as fh:
+        assert json.load(fh)["schema"] == "picrecall-dupes/1"
+
+
+def test_bench_gen_absent_default_data_dir_is_exit_2_with_actionable_message(
+        tmp_path, monkeypatch, capsys):
+    """默认数据目录落空（非可编辑安装的形态）→ exit 2，且消息要能照做。
+
+    M0 登记的已知缺口在此收口：与其让下游报一个指向 site-packages 的莫名路径，
+    不如在解析处就说清"传 --data"。
+    """
+    from picrecall import bench
+
+    monkeypatch.setattr(bench, "default_data_dir", lambda: str(tmp_path / "absent"))
+
+    assert _run(["bench", "gen", "--count", "2"]) == config.EXIT_USAGE
+    captured = capsys.readouterr()
+    combined = captured.out + captured.err
+    assert "数据目录不存在" in combined
+    assert "--data" in combined
+    assert "Traceback" not in combined
+
+
+def test_bench_run_absent_data_dir_is_exit_2_not_traceback(tmp_path, monkeypatch, capsys):
+    """`bench run` 的数据目录/manifest 缺席同样是用法错误（exit 2），不得裸抛。"""
+    from picrecall import bench
+
+    folder = tmp_path / "shots"
+    folder.mkdir()
+    dbp = str(tmp_path / "x.db")
+    assert _run(["index", str(folder), "--db", dbp]) == config.EXIT_OK
+
+    monkeypatch.setattr(bench, "default_data_dir", lambda: str(tmp_path / "absent"))
+    assert _run(["bench", "run", "--db", dbp]) == config.EXIT_USAGE
+    captured = capsys.readouterr()
+    combined = captured.out + captured.err
+    assert "数据目录不存在" in combined
+    assert "Traceback" not in combined

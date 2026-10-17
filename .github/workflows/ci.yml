@@ -27,7 +27,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Install (README 快速开始同一条通路)
+      - name: Install (extras 通路；requirements.txt 入口见 test-requirements-entry 作业)
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev]"
@@ -95,3 +95,75 @@ jobs:
             echo "::error::注入缺陷后基准仍然通过 = 假门"; exit 1
           fi
           echo "注入缺陷后基准正确报未达标"
+
+  test-requirements-entry:
+    name: ${{ matrix.os }} · py${{ matrix.python }} · requirements.txt 入口
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, python: "3.12" }
+          - { os: ubuntu-latest,  python: "3.12" }
+    env:
+      PYTHONUTF8: "1"
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      # 题目文档 §四 ① 的安装入口是 requirements.txt（既不是 extras）。
+      # 本作业在**干净 venv** 里验证该入口装完即闭环——M5 实测发现它曾只装依赖、
+      # 不装项目本身（没有 picrecall 命令、python -m picrecall 报 ModuleNotFoundError）。
+      - name: 干净 venv + 只跑 pip install -r requirements.txt
+        shell: bash
+        run: |
+          python -m venv "$RUNNER_TEMP/reqvenv"
+          if [ -x "$RUNNER_TEMP/reqvenv/bin/python" ]; then
+            REQPY="$RUNNER_TEMP/reqvenv/bin/python"
+          else
+            REQPY="$RUNNER_TEMP/reqvenv/Scripts/python.exe"
+          fi
+          "$REQPY" -m pip install --upgrade pip
+          "$REQPY" -m pip install -r requirements.txt
+          echo "REQPY=$REQPY" >> "$GITHUB_ENV"
+
+      - name: 入口探活 — 包与 console script 都得在
+        shell: bash
+        run: |
+          "$REQPY" -c "import picrecall; print('import ok:', picrecall.__file__)"
+          "$REQPY" -m picrecall --version
+          REQBIN="$(dirname "$REQPY")"
+          if [ -f "$REQBIN/picrecall.exe" ] || [ -f "$REQBIN/picrecall" ]; then
+            echo "console script 已生成"
+          else
+            echo "::error::requirements.txt 装完没有 picrecall console script"; exit 1
+          fi
+
+      - name: 快速开始闭环（照 README 逐条，exit 2 = 失败）
+        shell: bash
+        run: |
+          set -e
+          mkdir -p smoke/shots
+          "$REQPY" -c "from PIL import Image; Image.new('RGB',(200,80),'white').save('smoke/shots/a.png')"
+          run_or_fail() {  # 只允许声明的语义；exit 2/裸崩一律算失败
+            set +e; "$@"; rc=$?; set -e
+            if [ "$rc" -eq 2 ]; then echo "::error::用法错误（exit 2）: $*"; exit 1; fi
+            if [ "$rc" -gt 3 ]; then echo "::error::非契约退出码 $rc: $*"; exit 1; fi
+            return 0
+          }
+          run_or_fail "$REQPY" -m picrecall index smoke/shots --db smoke/req.db
+          run_or_fail "$REQPY" -m picrecall ocr --db smoke/req.db
+          run_or_fail "$REQPY" -m picrecall search hello --db smoke/req.db
+          run_or_fail "$REQPY" -m picrecall dedupe --db smoke/req.db --out smoke/req-keep.csv
+          run_or_fail "$REQPY" -m picrecall bench gen --data data --out smoke/synth --count 8
+          run_or_fail "$REQPY" -m picrecall bench gen --check --data data --out smoke/synth --count 8
+ 
+      - name: Pytest（同一干净 venv；dev 依赖另装）
+        shell: bash
+        run: |
+          "$REQPY" -m pip install -e ".[dev]"
+          "$REQPY" -m pytest -q

@@ -201,7 +201,14 @@ def cmd_stats(args):
 
 
 def cmd_bench_gen(args):
-    data_dir = args.data
+    # `--data` 省略时取默认数据目录（仓库 data/）——这里**必须**显式解析出默认值：
+    # 直接把 args.data 往下传会让 os.path.join(None, "synthetic") 抛裸 TypeError
+    # （M5 实测：README §其它命令 的三条 `bench gen` 全都 exit 1 裸崩，而非声明的 exit 2）。
+    try:
+        data_dir = bench.require_data_dir(args.data)
+    except FileNotFoundError as exc:
+        print("错误：%s" % exc, file=sys.stderr)
+        return config.EXIT_USAGE
     if args.dupes:
         # 近似重复族子集（M2）：默认落到 data/synthetic_dupes，与主集分开，互不影响。
         # `--dupes` 与 `--check` 语义不兼容（`--check` 是主集的再生成对账），
@@ -257,7 +264,13 @@ def cmd_bench_run(args):
         return config.EXIT_USAGE
     conn = db.connect(db_path)
     try:
-        report = bench.run_bench(conn, data_dir=args.data, inject_defect=args.inject_defect)
+        try:
+            report = bench.run_bench(conn, data_dir=args.data, inject_defect=args.inject_defect)
+        except FileNotFoundError as exc:
+            # 数据目录/manifest 缺席属用法与输入错误（K9 → exit 2），不是"检出问题"，
+            # 更不能裸抛异常（M5 实测：裸 FileNotFoundError 会以 traceback + exit 1 收场）。
+            print("错误：%s" % exc, file=sys.stderr)
+            return config.EXIT_USAGE
     finally:
         conn.close()
 

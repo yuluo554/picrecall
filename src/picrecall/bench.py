@@ -296,10 +296,31 @@ def run_rule_probes(conn, inject_defect=None):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def _default_data_dir():
+def default_data_dir():
+    """默认数据目录（仓库内 `data/`）。
+
+    按包路径推导，故**只在可编辑安装（源码树内）下成立**：非可编辑安装会把包复制到
+    site-packages，推导结果落到 site-packages 之外而落空——调用方须给出显式 `--data`
+    （见 `require_data_dir`）。这是 M0 登记的已知缺口，M5 实测确认并改为显式报错。
+    """
     return os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"
     )
+
+
+def require_data_dir(data_dir):
+    """解析生效的数据目录：显式传入优先，否则用默认；默认目录不存在即报**可照做**的错。
+
+    这条分支是为"非可编辑安装"准备的：默认目录落空时，与其让下游报一个指向
+    site-packages 的莫名路径，不如在这里直接告诉用户该传什么。
+    """
+    resolved = data_dir or default_data_dir()
+    if not os.path.isdir(resolved):
+        raise FileNotFoundError(
+            "数据目录不存在: %s（未显式传 --data 时按包路径推导；非可编辑安装会落空）"
+            "——请显式指定仓库内的数据目录: --data <仓库>/data" % resolved
+        )
+    return resolved
 
 
 def _resolve_manifest(data_dir):
@@ -381,7 +402,7 @@ def gen_synthetic(out_dir, data_dir=None, seed=None, count=None, quiet=False):
 
     seed = config.BENCH_SEED_DEFAULT if seed is None else int(seed)
     count = config.BENCH_IMAGE_COUNT_DEFAULT if count is None else int(count)
-    data_dir = data_dir or _default_data_dir()
+    data_dir = require_data_dir(data_dir)
     whitelist = _load_whitelist(data_dir)
 
     os.makedirs(out_dir, exist_ok=True)
@@ -468,7 +489,7 @@ def gen_dupes(out_dir, data_dir=None, seed=None, count=None):
 
     seed = config.BENCH_DUPES_SEED_DEFAULT if seed is None else int(seed)
     count = config.BENCH_DUPES_COUNT_DEFAULT if count is None else int(count)
-    data_dir = data_dir or _default_data_dir()
+    data_dir = require_data_dir(data_dir)
     whitelist = _load_whitelist(data_dir)
 
     os.makedirs(out_dir, exist_ok=True)
@@ -669,7 +690,7 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
 
     from .search import search
 
-    data_dir = data_dir or _default_data_dir()
+    data_dir = require_data_dir(data_dir)
     manifest_path = _resolve_manifest(data_dir)
     with open(manifest_path, "r", encoding="utf-8") as fh:
         manifest = json.load(fh)

@@ -11,6 +11,7 @@
 import ast
 import os
 import re
+import sys
 
 import pytest
 
@@ -80,7 +81,24 @@ def _readme_invoked_commands(readme):
 
 
 def _readme_flags(readme):
-    return set(re.findall(r"(?<![\w-])(--[a-z][a-z0-9-]+)", readme))
+    """README 里**属于 picrecall 调用**的旗标。
+
+    判据要按行分域，不能整篇一把抓：README 的 shell 代码块里还有别的命令
+    （`python -m pip install --upgrade pip`），把它们的旗标也算进来会得到
+    "pip 的 --upgrade 不是 picrecall 旗标"这种**假红**（M5 实测踩到）。
+
+    规则：围栏代码块内**只看调用了 picrecall 的行**；代码块外的正文照旧全文扫
+    （正文里提到 `--db` 之类本来就是在说 picrecall）。这样既排除异域旗标，
+    又保住"README 里给 picrecall 加个假旗标 → 必红"的牙齿。
+    """
+    flags = set()
+    for block in re.finditer(r"```[a-z]*\n(.*?)```", readme, re.S):
+        for line in block.group(1).splitlines():
+            if re.search(r"\bpicrecall\b", line):
+                flags |= set(re.findall(r"(?<![\w-])(--[a-z][a-z0-9-]+)", line))
+    prose = re.sub(r"```[a-z]*\n.*?```", "\n", readme, flags=re.S)
+    flags |= set(re.findall(r"(?<![\w-])(--[a-z][a-z0-9-]+)", prose))
+    return flags
 
 
 def test_readme_file_exists():
@@ -139,6 +157,115 @@ def test_requirements_txt_lists_ocr_and_core():
     req = _read(os.path.join(REPO_ROOT, "requirements.txt"))
     for needle in ("Pillow", "imagehash", "rapidocr-onnxruntime", "onnxruntime"):
         assert needle in req, "requirements.txt 缺 %s" % needle
+
+
+def test_requirements_txt_installs_the_project_itself():
+    """`pip install -r requirements.txt` 必须**连本项目一起装**（M5 实测缺陷）。
+
+    只列第三方依赖时，装完既没有 `picrecall` 命令、`python -m picrecall` 也报
+    ModuleNotFoundError——题目文档 §四 ① 的"装完即可三条命令闭环"不成立。
+    故该文件必须含一行对**本仓库自身**的引用（`-e .`），且该引用要真实指向含
+    pyproject.toml 的目录（不是写个字符串糊弄）。
+
+    变异：删掉 `-e .` 一行 → 本测试必红。
+    """
+    req_path = os.path.join(REPO_ROOT, "requirements.txt")
+    refs = []
+    for raw in _read(req_path).splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if re.match(r"^(?:-e|--editable)\s+\./?$", line) or line == ".":
+            refs.append(line)
+    assert refs, ("requirements.txt 未自指本项目（缺 `-e .`）：装完不会有 picrecall 命令，"
+                  "也不会装上包本身")
+
+    for ref in refs:
+        target = re.sub(r"^(?:-e|--editable)\s+", "", ref).strip() or "."
+        resolved = os.path.abspath(os.path.join(REPO_ROOT, target))
+        assert os.path.isfile(os.path.join(resolved, "pyproject.toml")), (
+            "requirements.txt 的自指 %r 指向的目录不含 pyproject.toml: %s" % (ref, resolved))
+
+
+# ── M5：README 指令面"照抄能跑"（安装面 = 指令面）────────────────────────────
+
+QUICKSTART_HEADING = "## 快速开始"
+
+
+def _quickstart_commands(readme):
+    """抽出 README §快速开始 代码块里的 `picrecall ...` 调用（逐行原文）。"""
+    start = readme.index(QUICKSTART_HEADING)
+    m = re.search(r"```bash\n(.*?)```", readme[start:], re.S)
+    assert m, "README 快速开始代码块缺失"
+    return [ln.strip() for ln in m.group(1).splitlines() if ln.strip().startswith("picrecall ")]
+
+
+def test_readme_quickstart_block_is_present():
+    cmds = _quickstart_commands(_read(README))
+    assert len(cmds) == 4, "快速开始应给出四条命令，实得 %d: %s" % (len(cmds), cmds)
+
+
+def test_readme_quickstart_commands_share_one_db():
+    """四条命令必须指向**同一个**索引库（缺省时 index 写进被扫描文件夹、其余读当前目录）。
+
+    M5 实测缺陷：README 原文的 `index "<folder>"` 与随后的裸 `ocr` 不在同一处，
+    照抄第二条即得"索引库不存在"（exit 2）。本测试把"同一库"这条不变量锁住。
+    """
+    cmds = _quickstart_commands(_read(README))
+    dbs = set()
+    for cmd in cmds:
+        m = re.search(r"--db\s+(\S+)", cmd)
+        dbs.add(m.group(1) if m else None)
+    assert len(dbs) == 1, "快速开始各命令的 --db 不一致: %s" % sorted(map(str, dbs))
+    assert None not in dbs, "快速开始应显式传 --db（缺省时各命令落点不同）"
+
+
+def test_readme_quickstart_runs_end_to_end(tmp_path):
+    """把快速开始**逐条真跑**（子进程）：不得有任何一条以 exit 2 收场、不得有裸 traceback。
+
+    这是"安装面 = 指令面"的实测门：静态对账（命令/旗标是否存在）挡不住
+    "命令存在但照抄跑不通"这类缺陷——M5 实测的 `bench gen` 裸 TypeError 与
+    `ocr` 找不到库都属于此类。OCR 引擎缺席时 `ocr` 允许 exit 3（依赖契约）。
+    """
+    import subprocess
+
+    from PIL import Image
+
+    cmds = _quickstart_commands(_read(README))
+    folder = tmp_path / "screenshots"
+    folder.mkdir()
+    Image.new("RGB", (320, 90), "white").save(str(folder / "shot_0.png"))
+    Image.new("RGB", (320, 90), "gray").save(str(folder / "shot_1.png"))
+
+    db_path = tmp_path / "shots.db"
+    csv_path = tmp_path / "keep-suggestions.csv"
+    # 注意：`str.split()` 不认识引号，命令行里的 `"/path/..."` 会带着引号成为一个整体
+    # token，故替换值取**不带引号**的裸路径（否则 argv 里会多出字面引号）。
+    subst = {
+        '"/path/to/your/screenshots"': str(folder),
+        "shots.db": str(db_path),
+        "keep-suggestions.csv": str(csv_path),
+    }
+
+    env = dict(os.environ, PYTHONUTF8="1")
+    results = []
+    for cmd in cmds:
+        argv = [sys.executable, "-m", "picrecall"] + cmd.split()[1:]
+        argv = [subst.get(tok, tok) for tok in argv]
+        proc = subprocess.run(argv, cwd=str(tmp_path), env=env,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        out = proc.stdout.decode("utf-8", "replace")
+        results.append((cmd, proc.returncode, out))
+
+    codes = [c for _, c, _ in results]
+    assert 2 not in codes, "快速开始有命令以 exit 2（用法/输入错误）收场:\n%s" % (
+        "\n".join("%s -> exit %d\n%s" % (c, n, o) for c, n, o in results))
+    for cmd, code, out in results:
+        assert "Traceback" not in out, "快速开始命令裸崩:\n%s -> exit %d\n%s" % (cmd, code, out)
+
+    assert codes[0] == 0, "建索引应 exit 0，实得 %d" % codes[0]
+    assert db_path.is_file(), "建索引后索引库不在四条命令共同指向的位置: %s" % db_path
+    assert codes[1] in (0, 1, 3), "ocr 退出码越界: %d" % codes[1]
+    assert codes[2] == 0, "检索应 exit 0（零命中也是合法空结果），实得 %d" % codes[2]
+    assert codes[3] in (0, 1), "dedupe 退出码越界: %d" % codes[3]
 
 
 def test_all_package_modules_are_importable():

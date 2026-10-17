@@ -15,7 +15,7 @@
 |---|---|
 | 增量索引 | 按 `文件内容 hash + mtime` 双重比对，二次建索引只处理新增/变更 |
 | OCR 识别 | RapidOCR（onnx，CPU 推理，无需 GPU；模型随包自带，首次运行不下载） |
-| 全文检索 | SQLite FTS5；中文分词双路径（libsimple 主路径 + 逐字 ngram 兜底，兜底无条件可用） |
+| 全文检索 | SQLite FTS5；中文分词双路径（libsimple 词级主路径 + CJK 逐字切分兜底，兜底无条件可用） |
 | 重复截图建议 | pHash 相似分组 + 保留建议清单（CSV）；**只出建议，绝不删除** |
 | 真值基准 | 合成截图集 + manifest 植入真值 + 一键对账（识别率/命中率） |
 
@@ -30,13 +30,22 @@
 
 ## 安装
 
+**先升 pip**（尤其 Python 3.8）：本项目是 pyproject-only 工程（无 `setup.py`），
+可编辑安装走 PEP 660；而 3.8.8 自带的 pip 20.2.3 不支持它，会直接报
+`editable mode currently requires a setup.py based build`（M5 干净 venv 实测）。
+
 ```bash
+python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
+
+该文件末尾有一行 `-e .`：它把**依赖与本项目一并装上**（可编辑安装），装完即可直接用
+`picrecall` 命令或 `python -m picrecall`，命令行补全与 `--help` 均可用。
 
 或按需选择（只想跑索引/检索/去重时可不装较重的 OCR 引擎）：
 
 ```bash
+python -m pip install --upgrade pip
 pip install -e ".[dev]"        # 核心 + 测试
 pip install -e ".[dev,ocr]"    # 追加 OCR 引擎（跑 OCR/基准需要）
 ```
@@ -47,23 +56,31 @@ pip install -e ".[dev,ocr]"    # 追加 OCR 引擎（跑 OCR/基准需要）
 **Python 版本**：3.8 及以上。注意 3.8 通道上 `onnxruntime` 上限为 1.19.x（1.20 起不再发布 cp38 轮子），
 `requirements.txt` 与 `pyproject.toml` 已按解释器分档约束。
 
+> **安装形态说明（M5 实测）**：以上两种都是**可编辑安装**，`picrecall bench gen` 等命令的
+> 默认数据目录（仓库内的 `data/`）按包路径推导，可编辑安装下能正确定位。
+> 若改用非可编辑安装（`pip install .`），包会被复制到 site-packages、**默认数据目录随之落空**，
+> 此时须给 `bench` 命令显式传 `--data <仓库 data 目录>`——程序会报错并给出该提示，不会静默算错。
+
 ## 快速开始（四条命令闭环）
 
 ```bash
 # 1. 建索引：递归扫描截图文件夹，记录路径/hash/mtime/尺寸
-picrecall index "/path/to/your/screenshots"
+picrecall index "/path/to/your/screenshots" --db shots.db
 
 # 2. 识别：对新增/变更的图跑 OCR，写入索引库
-picrecall ocr
+picrecall ocr --db shots.db
 
 # 3. 检索：按图里的文字搜回那张图
-picrecall search "账单"
+picrecall search "账单" --db shots.db
 
 # 4. 重复合并建议：相似图分组 + 保留建议清单（只读，不删任何文件）
-picrecall dedupe --out keep-suggestions.csv
+picrecall dedupe --db shots.db --out keep-suggestions.csv
 ```
 
-索引库默认落在截图文件夹内（`.picrecall.db`），可用 `--db PATH` 指定别处。
+这条 `--db` 是四条命令**指向同一个索引库**的关键。省略 `--db` 时：`index` 默认把库写在
+**被扫描的文件夹内**（`<folder>/.picrecall.db`），其余命令默认用**当前目录**下的
+`.picrecall.db`——两者不在同一处，逐条照抄会得到"索引库不存在"（exit 2）。
+要么像上面这样显式 `--db`，要么先 `cd` 进截图文件夹再 `picrecall index .`。
 
 **检索语义**：中文为**子串**语义（"账单"能命中"本月账单已生成"）；英文为词/前缀语义
 （`config*` 可命中 `configure`）。查询词越短结果越宽，属预期行为。
@@ -138,8 +155,8 @@ picrecall index "/path/to/screenshots" --profile simple
   全空白图应 0 行检出、单字符图应命中其字符、超长文本图不崩且行数有界、
   坏图/空文件夹不崩、无命中查询返回空）；
 - 达标门槛**随 manifest 下发**（数据非代码），且**按 profile 分设**
-  （`thresholds_by_profile`：`char` 与 `simple` 是两种分词粒度，对同一批真值查询的
-  可达召回上限本就不同；未声明该键则退回统一门槛，不并存两套默认）；
+  （`thresholds_by_profile`：`char` 为识别率 0.90 / 命中率 0.90，`simple` 为识别率 0.90 /
+  命中率 0.80；未声明该键则退回统一门槛，不并存两套默认）；
 - 基准可**证伪**：样本层 `--inject-defect ocr_drop|search_drop`、
   规则层 `--inject-defect rule_blank_always_true|rule_bound_ignored`
   注入后必须报"未达标"，否则说明基准在空转。
