@@ -224,7 +224,7 @@ def test_rule_layer_report_is_path_free(tmp_path, monkeypatch):
     blob = json.dumps(result, ensure_ascii=False)
     assert str(tmp_path) not in blob, "规则层报告泄漏了本测试临时目录"
     assert "picrecall-rule-" not in blob, "规则层报告泄漏了本层临时目录名"
-    # 形态特征：Windows 盘符（`X:\` 或 `X:/`）与仓库根路径
+    # 形态特征：Windows 盘符前缀（形如「字母 + 冒号 + 斜杠」）与仓库根路径
     assert re.search(r"[A-Za-z]:[\\/]", blob) is None, "规则层报告泄漏了盘符绝对路径"
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     assert repo_root not in blob, "规则层报告泄漏了仓库根路径"

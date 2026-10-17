@@ -30,7 +30,7 @@
    - ⚠️ 注意：`simple_segment()` 目前**故意抛 `SimpleUnavailable`**（未接线），
      接线时须同时更新 `tests/test_segment.py::test_simple_profile_unavailable_is_explicit`。
 2. **白名单台账生成物化**：写 `tools/update_data_ledger.py`，从 `data/` 资产复算 sha256 重建台账；
-   台账是生成物，禁手改（skill 阶段 1 纪律）。
+   台账是生成物，禁手改（阶段 1 纪律）。
 3. **合成集入仓**：`data/synthetic/.gitkeep` + 一次 `bench gen` 产出的 `manifest.json` 入 git；
    图片本体不入 git（`.gitignore` 已覆盖 `data/synthetic/*.png`），位级一致以 manifest 内 sha256 为锚。
 4. **`data/README.md` 增补"数据资产台账"节**（逐份登记 来源/许可/sha256/重建命令）。

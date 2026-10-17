@@ -19,7 +19,7 @@ def _ensure_utf8_stdio():
     """按 stream.encoding 探针决定是否 reconfigure（中文控制台 cp936 保持不动）。
 
     注意：本机 `py -X utf8` 只改"我们敲的那条命令"的 stdio，改不了子进程与 CI 的编码通路
-    （见 skill 验收门）；故入口显式加固，并在 CI 设 PYTHONUTF8=1。
+    （见验收门）；故入口显式加固，并在 CI 设 PYTHONUTF8=1。
     """
     for stream in (sys.stdout, sys.stderr):
         enc = (getattr(stream, "encoding", "") or "").lower()

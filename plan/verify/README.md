@@ -1,6 +1,6 @@
 # 10-16-2-pic-recall · 本地等价校验留档（plan/verify/README.md）
 
-> 依据：ai-tool-project-sprint 阶段 0 出口门与验收门「诚实口径」条。
+> 依据：阶段 0 出口门与验收门「诚实口径」条。
 > **本文件是增量记录**：后续里程碑追加新章节，**不覆盖**既有结论（K 纪律）。
 > 无远端期间一切 CI 类结论一律写"本地等价校验（未接远端，CI 待首推验证）"——
 > 未推送 = 未跑 CI，"CI 绿"是没发生过的事。
@@ -11,7 +11,7 @@
 
 | 项 | 实测结论 |
 |---|---|
-| 解释器通道 | `py -0p` → **3.8.8-64**（`C:\...\Python38`）与 **3.12.10-64**（`C:\...\Python312`）双通道 |
+| 解释器通道 | `py -0p` → **3.8.8-64** 与 **3.12.10-64** 双通道（均安装于用户目录） |
 | sqlite / FTS5 | 3.8.8 → sqlite 3.34.0；3.12.10 → sqlite 3.49.1；双通道 `fts5` 与 `unicode61/trigram/porter` 均 OK |
 | `enable_load_extension` | 双通道均 OK（具备加载 libsimple 的能力） |
 | OCR 引擎 | `rapidocr-onnxruntime==1.4.4` 双通道 pip 可见；3.12 venv 实装成功 |
@@ -88,7 +88,7 @@
 | # | 缺陷 | 根因 | 回归测试 |
 |---|---|---|---|
 | 1 | 检索展示切分串（`本 月 [账 单] 已 生 成`） | FTS 表与展示共用一个列，切分串被直接呈现 | `test_search_shows_original_text_not_segmented` |
-| 2 | 存储路径被小写化（`d:\programdata\...`） | 用 `normcase` 归一后入库，把匹配键当存储值 | `test_stored_path_keeps_original_case`、`test_path_key_matching_is_case_insensitive` |
+| 2 | 存储路径被小写化（`normcase` 后全小写形态） | 用 `normcase` 归一后入库，把匹配键当存储值 | `test_stored_path_keeps_original_case`、`test_path_key_matching_is_case_insensitive` |
 | 3 | 合成图长文本被裁掉、manifest 仍声明"渲染过"（真值失真） | 画布固定 520px，未按实测文本宽度定尺寸 | `test_synthetic_render_never_clips_text` |
 | 4 | `bench run --data <生成目录>` 找不到 manifest | 只找 `<data>/synthetic/manifest.json`，不认"直接指输出目录" | `bench._resolve_manifest` 双形态 |
 | 5 | `gen --check` 少带 `--count` 即误报"漂移" | 未从既有 manifest 派生 seed/count | `test_check_derives_seed_and_count_from_manifest` |

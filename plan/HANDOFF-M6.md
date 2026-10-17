@@ -117,7 +117,7 @@ M4 的 3 条见 `plan/HANDOFF-M5.md` §四。**M5 新增 6 条**：
    **逐字节未变**），但改了 `_render()` 或升规模后，务必 `git status` + `gen --check` **双向核对**。
 5. **Windows 上 Git Bash 的 `/tmp` 与 Windows Python 眼里的 `/tmp` 不是同一个路径**：
    bash 的 `> /tmp/x.json` 重定向没问题，但把 `/tmp/x.json` 传给 **Python** 去 `open()` 会找
-   `D:\tmp\x.json`（按当前盘符解析）而报 FileNotFoundError。**传给 Python 的路径用
+   `\tmp\x.json`（**当前盘符根下**，按盘符解析）而报 FileNotFoundError。**传给 Python 的路径用
    `$PWD/...` 或绝对 Windows 路径**（M5 实测踩到，一度以为 bench 没产出）。
 6. **`bench gen --check` 的 `--out` 必须指向"已生成过的目录"**：`--check` 是"再生成对账"，
    不是"新建并校验"；指向空目录会报 `基准漂移：manifest 不存在`（exit 1，属预期）。

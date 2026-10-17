@@ -1,4 +1,4 @@
-"""README ↔ CLI 反射对账门（skill 验收门"测试面=安装面=README 指令面"）。
+"""README ↔ CLI 反射对账门（验收门"测试面=安装面=README 指令面"）。
 
 三面：
   ① README 里出现的每个 `picrecall <sub>` 命令与 `--flag` 都必须在 CLI 里真实存在；
