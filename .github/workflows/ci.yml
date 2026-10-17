@@ -76,13 +76,21 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e ".[dev,ocr]"
 
+      # M6 首推实测：ubuntu runner 不带任何 CJK 字体（fonts-noto-cjk 缺席），
+      # 合成图渲染会落 DejaVu → 豆腐块 → 识别率 0.21。字体是基准的前置数据。
+      - name: Install CJK fonts (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+
       - name: Selftest requiring OCR
         run: python -m picrecall selftest --require-ocr
 
+      # M6 首推实测：count=8 只有 14 行样本，0.90 门槛容不下跨机器 OCR 的 2 行波动
+      # （windows 首轮 0.8571 打红）。升到 24 图（≈47 行）给统计量留余量。
       - name: 端到端 — 合成集 → 索引 → OCR → 检索 → 基准对账
         shell: bash
         run: |
-          python -m picrecall bench gen --data data --out smoke/synth --count 8
+          python -m picrecall bench gen --data data --out smoke/synth --count 24
           python -m picrecall index smoke/synth --db smoke/b.db
           python -m picrecall ocr --db smoke/b.db
           python -m picrecall search 账单 --db smoke/b.db
