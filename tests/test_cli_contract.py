@@ -76,8 +76,18 @@ def test_empty_search_returns_zero_exit(tmp_path):
 
 
 def test_missing_dependency_is_exit_3(tmp_path, monkeypatch):
-    """依赖缺失走 exit 3 契约（用 import 桩模拟引擎缺席，别等 CI）。"""
+    """依赖缺失走 exit 3 契约（用 import 桩模拟引擎缺席，别等 CI）。
+
+    M4 加固：本项此前隐含依赖"进程内 OCR 引擎缓存为冷"——而 M4 的规则驱动层
+    （`run_bench` → `run_rule_probes`）会真加载一次引擎，一旦缓存被暖过，
+    import 桩就再也拦不住（实测：全量跑时本项红、单跑时绿）。故显式**清空缓存**，
+    使契约判定只取决于 import 通路，与测试执行顺序无关。
+    """
     import builtins
+
+    from picrecall import ocr as _ocr
+
+    monkeypatch.setattr(_ocr, "_ENGINE", None)  # 契约判定不得依赖缓存状态（M4 加固）
 
     folder = tmp_path / "shots"
     folder.mkdir()

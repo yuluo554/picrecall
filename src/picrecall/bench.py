@@ -17,6 +17,7 @@
 import os
 
 from . import config
+from .db import get_meta
 from .serialize import write_json
 
 MANIFEST_SCHEMA = "picrecall-bench/1"
@@ -51,6 +52,248 @@ DUPES_MEMBER_SPECS = (
     {"role": "hi_res", "scale": 1.15, "fmt": "PNG"},
     {"role": "lo_res_big", "scale": 0.95, "fmt": "BMP"},
 )
+
+# ── 规则驱动层口径锚定（M4，plan/05 §4.3）──
+# 分工（两层不可混同）：
+#   样本驱动层：读 manifest 的期望，对账"**声明过**的输入是否被正确处理"。
+#   规则驱动层：**完全不读 manifest**，自造"构造上已知"的输入，从机制推导端点应有的表现
+#               ——专治样本没覆盖的端点（空白/单字符/超长/坏图/空文件夹/无命中查询）。
+# 为何期望不必来自真值文件：探针的输入是本层当场渲染/当场写盘的，故"输入是什么"由构造
+#   本身给定，期望因此可由机制直接推出。这是 K14（真值只存输入与期望）的延伸：
+#   规则层的输入与期望都由本层生成，**没有任何理由**去读 manifest——读了就退化成"第二个样本层"。
+# 纪律：`run_rule_probes` 的签名与函数体**不得出现 manifest**；由测试证伪
+#   （把 `_resolve_manifest` 打成抛异常 / 删掉 manifest → 本层结论必须逐项不变）。
+RULE_PROBE_SINGLE_CHAR = "账"
+RULE_PROBE_LONG_LINE = "配置项说明与错误提示信息"
+RULE_PROBE_LONG_LINES = 24
+RULE_PROBE_LINE_BOUND = 200
+RULE_PROBE_IMPOSSIBLE_QUERY = "zzqqxxvv"
+RULE_INJECT_DEFECTS = ("rule_blank_always_true", "rule_bound_ignored")
+
+
+def _is_blank_observation(obs):
+    """机制判定①：观测中**非空文本数为 0**（无文本像素 → 不应产生文本行）。
+
+    入参是 `_observed()` 压出的 `(非空文本数, 总行数)`。
+    """
+    return obs[0] == 0
+
+
+def _within_line_bound(n):
+    """机制判定②：行数**有界且非零**（0 行属"无文本"场景，归判定①管）。"""
+    return 0 < n <= RULE_PROBE_LINE_BOUND
+
+
+def _rule_predicates(inject_defect=None):
+    """取规则层判定函数；注入缺陷时返回**被破坏**的判定（可证伪探活用）。
+
+    探活的机制：判定函数一旦被改成"恒真"，**对侧期望**必然失守——
+    ① 空白判定恒真 → 单字符探针（要求"非空白"）红；
+    ② 行数上界判定恒真 → 判定自身的边界自检（要求"越界为 False"）红。
+    """
+    if inject_defect == "rule_blank_always_true":
+        return (lambda obs: True), _within_line_bound
+    if inject_defect == "rule_bound_ignored":
+        return _is_blank_observation, (lambda n: True)
+    return _is_blank_observation, _within_line_bound
+
+
+def _observed(observed_lines):
+    """把 OCR 观测压成 `(非空文本数, 总行数)`（规则层判定函数的统一入参）。"""
+    texts = [_normalize(o.get("text", "")) for o in observed_lines]
+    return (sum(1 for t in texts if t), len(texts))
+
+
+def _write_rule_probe_images(out_dir):
+    """写出规则层**自造**的探针图（M4）。
+
+    "输入是什么"由构造本身给定（本层当场渲染/写盘），故"期望是什么"可由机制直接推出——
+    这正是本层**无需读 manifest** 的原因（K14 的延伸：真值只存输入与期望，而这里输入与
+    期望都是本层自己造的）。返回 {标签: 相对文件名}；文件名固定，**不含绝对路径**
+    （报告须双跑逐项一致，见 M4 DoD ④）。
+    """
+    from PIL import Image, ImageDraw
+
+    names = {}
+    # ① 全空白图：画布上无任何文本像素 → 不应产生文本行
+    Image.new("RGB", (520, 160), (248, 248, 250)).save(
+        os.path.join(out_dir, "probe_blank.png"), format="PNG")
+    names["blank"] = "probe_blank.png"
+
+    # ② 单字符图 → 应命中其字符（可检出 + 可检索）
+    img = Image.new("RGB", (520, 160), (248, 248, 250))
+    ImageDraw.Draw(img).text((20, 24), RULE_PROBE_SINGLE_CHAR,
+                             font=_find_font(34), fill=(20, 20, 20))
+    img.save(os.path.join(out_dir, "probe_single.png"), format="PNG")
+    names["single"] = "probe_single.png"
+
+    # ③ 超长文本图：同一长行重复多行 → 行数大但**有界**，且不得崩溃
+    rng = _SplitMix64(0)
+    img, _meta = _render("plain", [RULE_PROBE_LONG_LINE] * RULE_PROBE_LONG_LINES,
+                         20, rng, Image, ImageDraw)
+    img.save(os.path.join(out_dir, "probe_long.png"), format="PNG")
+    names["long"] = "probe_long.png"
+
+    # ④ 坏图：非图片字节 → 索引不得中断，检索不得崩溃
+    with open(os.path.join(out_dir, "probe_corrupt.png"), "wb") as fh:
+        fh.write(b"this is not an image")
+    names["corrupt"] = "probe_corrupt.png"
+
+    # ⑤ 空文件夹：无任何图片 → 索引不崩、检索返回空
+    os.makedirs(os.path.join(out_dir, "empty"), exist_ok=True)
+    names["empty_dir"] = "empty"
+    return names
+
+
+def run_rule_probes(conn, inject_defect=None):
+    """规则驱动层（plan/05 §4.3）：**完全不读 manifest**，从机制推导端点应有的表现。
+
+    与样本驱动层的分工：样本层读 manifest 的期望，对账"**声明过**的输入是否被正确处理"；
+    本层自造构造上已知的输入，专治**样本没覆盖的端点**（全空白 / 单字符 / 超长 / 坏图 /
+    空文件夹 / 无命中查询）。若本层也去读 manifest，就退化成"第二个样本层"，失去意义——
+    故签名与函数体**不得出现 manifest**，并由 `tests/test_bench_rules.py` 三重证伪
+    （① 源码不得含 manifest 字样；② 把 `_resolve_manifest` 打成抛异常仍给出同样结论；
+      ③ 删掉 manifest 文件仍给出同样结论）。
+
+    探针图在本层自建的**独立临时索引库**上跑，不污染调用方的库；只有"无命中查询"
+    与"空白查询"两项直接读调用方的库（只读，验证检索侧机制）。
+
+    `inject_defect` 注入**机制破坏**（可证伪探活）：判定函数被改成"恒真"后，
+    对侧期望必然失守（如空白判定恒真 → 单字符探针红）。见 `_rule_predicates`。
+
+    返回 {"available", "probes", "passed", "unavailable", "inject_defect"}；
+    报告里的一切细节都用**固定标签与计数**，不含绝对路径（保证双跑逐项一致）。
+    """
+    import json
+    import shutil
+    import tempfile
+
+    from . import db as _db, index as _index, ocr as _ocr, search as _search
+
+    blank_ok, bound_ok = _rule_predicates(inject_defect)
+    probes = []
+
+    def add(name, kind, available, ok, detail):
+        probes.append({"name": name, "kind": kind, "available": bool(available),
+                       "ok": bool(ok), "detail": detail})
+
+    tmp = tempfile.mkdtemp(prefix="picrecall-rule-")
+    try:
+        names = _write_rule_probe_images(tmp)
+
+        # ── 探针库：本层自建的独立索引库（不污染调用方）──
+        pconn = _db.connect(os.path.join(tmp, "probe.db"))
+        try:
+            _index.apply_scan(pconn, _index.scan_folder(tmp))
+            path_to_id = {r["path"]: r["id"] for r in
+                          pconn.execute("SELECT id, path FROM files")}
+
+            def observed(fname):
+                fid = _find_path_for(path_to_id, fname)
+                if fid is None:
+                    return []
+                row = pconn.execute(
+                    "SELECT line_json FROM ocr_text WHERE file_id = ?", (fid,)
+                ).fetchone()
+                return json.loads(row["line_json"]) if row is not None else []
+
+            def status_of(fname):
+                fid = _find_path_for(path_to_id, fname)
+                if fid is None:
+                    return None
+                return pconn.execute(
+                    "SELECT status FROM files WHERE id = ?", (fid,)
+                ).fetchone()["status"]
+
+            # 引擎不可用时**只**降级 OCR 依赖的探针，索引/检索侧探针照跑（如实标注）
+            ocr_available = True
+            ocr_reason = None
+            try:
+                _ocr.ocr_pending(pconn)  # 失败隔离（K5）保证坏图不中断整批
+            except _ocr.MissingDependency as exc:
+                ocr_available = False
+                ocr_reason = str(exc)
+
+            # ① 全空白图 → 非空文本数必须为 0
+            if ocr_available:
+                obs = _observed(observed(names["blank"]))
+                add("blank_image_yields_no_text_line", "ocr", True, blank_ok(obs),
+                    "非空文本行=%d（期望 0）" % obs[0])
+            else:
+                add("blank_image_yields_no_text_line", "ocr", False, False,
+                    "OCR 引擎不可用（%s）" % ocr_reason)
+
+            # ② 单字符图 → 必须检出其字符，且该字符可被检索到
+            if ocr_available:
+                obs = _observed(observed(names["single"]))
+                has_text = not blank_ok(obs)
+                fid = _find_path_for(path_to_id, names["single"])
+                hits = _search.search(pconn, RULE_PROBE_SINGLE_CHAR)
+                searchable = any(h["file_id"] == fid for h in hits)
+                add("single_char_is_detected_and_searchable", "ocr",
+                    True, has_text and searchable,
+                    "非空文本行=%d，该字符检索命中=%s" % (obs[0], searchable))
+            else:
+                add("single_char_is_detected_and_searchable", "ocr", False, False,
+                    "OCR 引擎不可用（%s）" % ocr_reason)
+
+            # ③ 超长文本图 → 不崩溃（状态非 ocr_failed）且行数有界
+            if ocr_available:
+                n = len(observed(names["long"]))
+                st = status_of(names["long"])
+                add("long_text_does_not_crash_and_lines_bounded", "ocr", True,
+                    (st != "ocr_failed") and bound_ok(n),
+                    "状态=%s，观测行数=%d（期望 1..%d）" % (st, n, RULE_PROBE_LINE_BOUND))
+            else:
+                add("long_text_does_not_crash_and_lines_bounded", "ocr", False, False,
+                    "OCR 引擎不可用（%s）" % ocr_reason)
+
+            # ③' 上界判定自身的边界自检（给"上界被无视"的注入以牙齿）
+            add("line_bound_predicate_rejects_overflow", "mechanism", True,
+                bound_ok(RULE_PROBE_LINE_BOUND + 1) is False,
+                "上界判定对 %d 行须为 False（越界拒绝）" % (RULE_PROBE_LINE_BOUND + 1))
+
+            # ④ 坏图 → 索引不崩（台账行仍在、未被静默丢弃），检索不崩且无命中
+            st = status_of(names["corrupt"])
+            row_exists = st is not None
+            hits = _search.search(pconn, RULE_PROBE_IMPOSSIBLE_QUERY)
+            add("corrupt_image_survives_index_and_search_is_empty", "index", True,
+                row_exists and st != "missing" and hits == [],
+                "台账行存在=%s，状态=%s，无命中查询返回=%d"
+                % (row_exists, st, len(hits)))
+        finally:
+            pconn.close()
+
+        # ⑤ 空文件夹 → 索引不崩、库内 0 文件、检索返回空（独立库，避免牵动探针库的 missing 判定）
+        econn = _db.connect(os.path.join(tmp, "empty.db"))
+        try:
+            scan = _index.scan_folder(os.path.join(tmp, names["empty_dir"]))
+            _index.apply_scan(econn, scan)
+            stats = _index.index_stats(econn)
+            hits = _search.search(econn, RULE_PROBE_IMPOSSIBLE_QUERY)
+        finally:
+            econn.close()
+        add("empty_folder_indexes_cleanly_and_search_is_empty", "index", True,
+            len(scan) == 0 and stats["total_files"] == 0 and hits == [],
+            "扫描到=%d，库内文件=%d，检索命中=%d"
+            % (len(scan), stats["total_files"], len(hits)))
+
+        # ⑥ 调用方库上的检索侧端点（只读）：无命中查询 / 无 token 查询都必须返回空、不崩
+        absent = _search.search(conn, RULE_PROBE_IMPOSSIBLE_QUERY)
+        blank_q = _search.search(conn, "   ")
+        add("absent_and_tokenless_queries_return_empty", "search", True,
+            absent == [] and blank_q == [],
+            "无命中查询返回=%d，无 token 查询返回=%d" % (len(absent), len(blank_q)))
+
+        return {
+            "available": ocr_available,
+            "probes": probes,
+            "passed": all(p["ok"] for p in probes if p["available"]),
+            "unavailable": [p["name"] for p in probes if not p["available"]],
+            "inject_defect": inject_defect,
+        }
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 def _default_data_dir():
@@ -179,6 +422,11 @@ def gen_synthetic(out_dir, data_dir=None, seed=None, count=None, quiet=False):
         "generator_version": _pkg_version(),
         "image_count": count,
         "thresholds": dict(config.BENCH_DEFAULT_THRESHOLDS),
+        # 分 profile 门槛（M4，D-22）：与统一门槛同处 manifest（数据非代码）；
+        # run_bench 按索引库的 profile 取生效门槛，未声明即退回统一门槛。
+        "thresholds_by_profile": {
+            k: dict(v) for k, v in config.BENCH_THRESHOLDS_BY_PROFILE.items()
+        },
         "images": images,
     }
     manifest_path = os.path.join(out_dir, "manifest.json")
@@ -410,6 +658,12 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
     """真值对账：识别率（逐行）+ 检索命中率（逐 query），观测运行时实算。
 
     manifest 只提供期望（lines/queries/thresholds），观测由本函数实算（K14）。
+
+    报告分两层（plan/05 §4.3）：
+      - `ocr` / `search`：**样本驱动层**（读 manifest 对账）；
+      - `rules`：**规则驱动层**（`run_rule_probes`，完全不读 manifest，专治样本外端点）。
+    报告的细节一律用**相对文件名/固定标签**，不含绝对路径或时钟——保证同库双跑逐项一致
+    （M4 DoD ④）。
     """
     import json
 
@@ -421,6 +675,13 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
         manifest = json.load(fh)
 
     thr = dict(manifest.get("thresholds") or config.BENCH_DEFAULT_THRESHOLDS)
+    # 分 profile 门槛（M4，D-22）：manifest 顶层键，与统一门槛同源下发（数据非代码）。
+    # 未声明 → 不塞入，`_effective_thresholds` 即退回统一门槛（口径唯一，不并存两套默认）。
+    by_profile = manifest.get("thresholds_by_profile")
+    if by_profile:
+        thr["thresholds_by_profile"] = {
+            k: dict(v) for k, v in by_profile.items()
+        }
     if thresholds:
         thr.update(thresholds)
 
@@ -493,10 +754,22 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
                               "got_files": sorted(got), "recalled": ok})
 
     query_recall = (hit_q / total_q) if total_q else 0.0
-    passed = (ocr_recall >= thr["ocr_line_recall"]) and (query_recall >= thr["query_recall"])
+
+    # 门槛标定（M4，D-22）：分 profile 门槛——char 与 simple 是**两种分词粒度**，
+    # 同一门槛对二者不公平（真值查询派生方式与词级粒度错配，见 D-18）。
+    # 未声明 `thresholds_by_profile` 时退回统一门槛（向后兼容，口径唯一）。
+    prof = get_meta(conn, "tokenizer_profile", config.PROFILE_CHAR)
+    eff = _effective_thresholds(thr, prof)
+    sample_passed = (ocr_recall >= eff["ocr_line_recall"]) and \
+                    (query_recall >= eff["query_recall"])
+
+    # 规则驱动层（不读 manifest；见 run_rule_probes 的纪律声明）
+    rules = run_rule_probes(conn, inject_defect=inject_defect)
 
     return {
         "thresholds": thr,
+        "profile": prof,
+        "effective_thresholds": eff,
         "ocr": {"total_lines": total_lines, "detected_lines": detected_lines,
                 "recall": round(ocr_recall, 6),
                 "recall_strict_single_line": round(ocr_recall_strict, 6),
@@ -505,9 +778,24 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
         "search": {"total_queries": total_q, "recalled_queries": hit_q,
                    "recall": round(query_recall, 6), "false_positives": false_positives,
                    "details": query_details},
-        "passed": passed,
+        "rules": rules,
+        "passed": bool(sample_passed and rules["passed"]),
+        "sample_passed": bool(sample_passed),
         "inject_defect": inject_defect,
     }
+
+
+def _effective_thresholds(thr, profile):
+    """按 profile 取生效门槛（M4，D-22）。
+
+    `manifest.thresholds_by_profile[profile]` 若存在则**覆盖**统一门槛；
+    未声明该键 → 退回统一门槛（口径唯一：要么统一，要么分 profile，不并存两套默认）。
+    """
+    out = dict(thr)
+    by_profile = thr.get("thresholds_by_profile") or {}
+    for key, value in (by_profile.get(profile) or {}).items():
+        out[key] = value
+    return {k: v for k, v in out.items() if not isinstance(v, dict)}
 
 
 def _find_path_for(path_to_id, fname):
@@ -610,6 +898,7 @@ def _truth_view(manifest):
         "generator_version": manifest.get("generator_version"),
         "image_count": manifest.get("image_count"),
         "thresholds": manifest.get("thresholds"),
+        "thresholds_by_profile": manifest.get("thresholds_by_profile"),
         "images": [
             {"file": i["file"], "lines": i["lines"], "queries": i["queries"], "layout": i["layout"]}
             for i in manifest.get("images", [])

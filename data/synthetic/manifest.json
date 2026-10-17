@@ -1192,5 +1192,15 @@
   "thresholds": {
     "ocr_line_recall": 0.9,
     "query_recall": 0.9
+  },
+  "thresholds_by_profile": {
+    "char": {
+      "ocr_line_recall": 0.9,
+      "query_recall": 0.9
+    },
+    "simple": {
+      "ocr_line_recall": 0.9,
+      "query_recall": 0.8
+    }
   }
 }

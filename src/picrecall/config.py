@@ -25,9 +25,22 @@ PHASH_MAX_DISTANCE = 8
 PHASH_HASH_SIZE = 16  # imagehash.phash(hash_size=16) → 256 bit
 
 # ── 模块 5：基准口径（门槛随 manifest 下发，此处仅为兜底默认，K13）──
+# 统一门槛（兜底）：manifest 未声明 `thresholds_by_profile` 时用这一套。
 BENCH_DEFAULT_THRESHOLDS = {
     "ocr_line_recall": 0.90,
     "query_recall": 0.90,
+}
+# 分 profile 门槛（M4，D-22 定案）：char 与 simple 是**两种分词粒度**，对同一批
+# 由"子串语义"派生的真值查询，其可达召回上限本就不同（词级要求查询对齐词边界）。
+# 故按 profile 各设一套，**不并存两套默认**：有 `thresholds_by_profile` 即按 profile 取，
+# 无则统一门槛。**未为达标而改已入仓真值**（D-18 红线）。
+# 定标依据（M4 实测，见 plan/verify §M4 二）：两 profile 的 OCR 行识别率**完全相同**（0.9545），
+# 差异**只在**检索侧；且 simple 的 5 处漏召回中 3 处根因是"真值查询取最长 CJK 片段前 4 字"
+# 截断在词中间（词级无法命中跨词边界的子串），另 2 处（`failed`/`invalid`）是 OCR 切框，
+# **两 profile 同源同受影响**。故 simple 的门槛按"词级语义"另定，不是把统一门槛下调凑数。
+BENCH_THRESHOLDS_BY_PROFILE = {
+    "char": {"ocr_line_recall": 0.90, "query_recall": 0.90},
+    "simple": {"ocr_line_recall": 0.90, "query_recall": 0.80},
 }
 BENCH_SEED_DEFAULT = 20261016
 BENCH_IMAGE_COUNT_DEFAULT = 60

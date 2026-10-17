@@ -261,18 +261,30 @@ def cmd_bench_run(args):
     finally:
         conn.close()
 
+    eff = report.get("effective_thresholds", report["thresholds"])
+    rules = report.get("rules", {})
     payload = report
     human = [
+        "分词 profile: %s（生效门槛按 profile 取，M4/D-22）" % report.get("profile", "?"),
         "OCR 行识别率: %.4f（门槛 %.2f，%d/%d 行；严格单条口径 %.4f）"
-        % (report["ocr"]["recall"], report["thresholds"]["ocr_line_recall"],
+        % (report["ocr"]["recall"], eff["ocr_line_recall"],
            report["ocr"]["detected_lines"], report["ocr"]["total_lines"],
            report["ocr"].get("recall_strict_single_line", 0.0)),
         "检索命中率: %.4f（门槛 %.2f，%d/%d 查询；误召回 %d）"
-        % (report["search"]["recall"], report["thresholds"]["query_recall"],
+        % (report["search"]["recall"], eff["query_recall"],
            report["search"]["recalled_queries"], report["search"]["total_queries"],
            report["search"]["false_positives"]),
-        "结论: %s" % ("达标" if report["passed"] else "未达标"),
+        "样本驱动层: %s" % ("达标" if report.get("sample_passed") else "未达标"),
     ]
+    if rules:
+        human.append(
+            "规则驱动层（不读 manifest）: %s（%d 项探针，%s）"
+            % ("达标" if rules.get("passed") else "未达标", len(rules.get("probes", [])),
+               "OCR 可用" if rules.get("available") else "OCR 不可用，OCR 类探针降级"))
+        for p in rules.get("probes", []):
+            human.append("  [%s] %s: %s"
+                         % ("ok" if p["ok"] else "!!", p["name"], p["detail"]))
+    human.append("结论: %s" % ("达标" if report["passed"] else "未达标"))
     _out(args, payload, human)
     return config.EXIT_OK if report["passed"] else config.EXIT_FINDINGS
 
@@ -358,8 +370,10 @@ def build_parser():
     bp = bsub.add_parser("run", help="真值对账（识别率 + 检索命中率）")
     bp.add_argument("--db", help="索引库路径（默认 ./.picrecall.db）")
     bp.add_argument("--data", help="数据目录（默认仓库 data/）")
-    bp.add_argument("--inject-defect", choices=["ocr_drop", "search_drop"],
-                    help="注入缺陷（验证基准可证伪，必打红）")
+    bp.add_argument("--inject-defect",
+                    choices=["ocr_drop", "search_drop"] + list(bench.RULE_INJECT_DEFECTS),
+                    help="注入缺陷（验证基准可证伪，必打红）：样本层 ocr_drop/search_drop，"
+                         "规则层 rule_blank_always_true/rule_bound_ignored")
     bp.add_argument("--json", action="store_true", help="机读 JSON 输出")
     bp.set_defaults(func=cmd_bench_run)
 

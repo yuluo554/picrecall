@@ -133,13 +133,26 @@ picrecall index "/path/to/screenshots" --profile simple
   生成合成截图集与 `manifest.json`；manifest 植入真值（每张图的渲染文本 + 应命中查询词），
   **只存输入与期望，不含任何观测值**；
 - `bench run` 运行时实算观测，与 manifest 对账，输出 OCR 行识别率与检索命中率；
-- 达标门槛**随 manifest 下发**（数据非代码），可调；
-- 基准可**证伪**：`--inject-defect ocr_drop|search_drop` 注入缺陷后必须报"未达标"，
-  否则说明基准在空转。
+  报告分**两层**：**样本驱动层**（读 manifest 对账）+ **规则驱动层**
+  （`run_rule_probes`，**完全不读 manifest**，从机制推导样本没覆盖的端点：
+  全空白图应 0 行检出、单字符图应命中其字符、超长文本图不崩且行数有界、
+  坏图/空文件夹不崩、无命中查询返回空）；
+- 达标门槛**随 manifest 下发**（数据非代码），且**按 profile 分设**
+  （`thresholds_by_profile`：`char` 与 `simple` 是两种分词粒度，对同一批真值查询的
+  可达召回上限本就不同；未声明该键则退回统一门槛，不并存两套默认）；
+- 基准可**证伪**：样本层 `--inject-defect ocr_drop|search_drop`、
+  规则层 `--inject-defect rule_blank_always_true|rule_bound_ignored`
+  注入后必须报"未达标"，否则说明基准在空转。
 
 **口径取舍（如实声明）**：识别率以"该行文本归一化后**包含于**某条 OCR 输出行"计，
 而非逐字相等——OCR 对中文标点/空格常有不稳定差异。该取舍使口径**偏宽松**，
 检索侧同时报告误召回数，不掩盖问题。
+
+**分 profile 门槛的标定依据（M4）**：两 profile 的 OCR 行识别率**完全相同**
+（0.9545），差异**只在**检索侧；`simple` 的 5 处漏召回中 3 处根因是真值查询
+"取最长 CJK 片段前 4 字"截断在词中间（词级语义下不可命中），另 2 处（`failed`/`invalid`）
+是 OCR 切框、两 profile 同源同受影响。故 `simple` 的检索门槛按词级语义另定，
+**不是把统一门槛下调凑数**，也**未改任何已入仓真值**。
 
 ## 开发
 

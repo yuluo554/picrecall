@@ -508,3 +508,214 @@ M0/M1/M2 的 K1–K19 全部仍然有效。M3 **未新增 K 编号**，对 **K4/
   ① CI 仍未跑过（无远端）；② K4 的并发安全性**未实测**（单进程验证）；
   ③ "陈旧"只在"内容变更"与"扫描后编辑"两种形态上实测，真实用户的编辑时序**未覆盖**；
   ④ 本轮真 OCR 冒烟耗时约 3 分钟（60 图），未做更大规模吞吐实测（M4）。
+
+## M4（2026-10-17）：基准标定 + 规则驱动层
+
+> 本节为**增量追加**，不覆盖 M0–M3 章节（上文 §M0 一–七、§M1 一–八、§M2 一–八、§M3 一–八）。
+> 上一棒待办出处：`plan/HANDOFF-M4.md` §二；出口判据：同文件 §五 DoD checklist。
+
+### 一、规则驱动层落地（M4 DoD ⑤：本棒最重要的实缺口）
+
+**要解决的问题**（`plan/HANDOFF-M4.md` §二 1 点明）：plan/05 §4.3 定义了双层对账，
+但实测全库 grep **无任何规则层实现与测试**——样本驱动层已落地，**规则驱动层从未存在**。
+
+| 层 | 职责 | 是否读 manifest | M4 前状态 |
+|---|---|---|---|
+| 样本驱动层 | 读期望，对账"**声明过**的输入是否被正确处理" | ✅ 读 | ✅ 已实现（`run_bench`） |
+| 规则驱动层 | 自造构造上已知的输入，从**机制**推导端点应有表现 | ❌ **不读** | ❌ **未实现**（本棒补齐） |
+
+**落地**：`bench.run_rule_probes(conn, inject_defect=None)`，在 `bench run` 报告里单列 `report["rules"]`。
+
+**为何"不读 manifest"是这一层的**本质**（而非可选纪律）**：本层的价值在"专治样本没覆盖的端点"。
+探针图由本层**当场渲染/写盘**，"输入是什么"由构造本身给定，故"期望是什么"可由机制直接推出——
+**没有任何理由**去读真值文件。一旦读了，本层就退化成"第二个样本层"，覆盖样本外端点的能力归零。
+
+**三重证伪**（`tests/test_bench_rules.py`）：
+
+| # | 证伪手段 | 实测 |
+|---|---|---|
+| ① | AST 扫描规则层各函数源码，禁 `manifest` 标识符（只查 Name/Attribute，不误判 docstring） | ✅ 源码 0 处引用 |
+| ② | 把 `bench._resolve_manifest` 打成**抛异常** → 规则层结论须逐项不变 | ✅ 探针列表逐项相等 |
+| ③ | 把真值 `manifest.json` **删掉** → 规则层结论须逐项不变 | ✅ 逐项相等；**对照**：样本层同时因找不到真值而报错（证明两层确实分离） |
+
+> 证伪 ③ 实测输出：`删 manifest 前 passed: True` / `删 manifest 后 passed: True` /
+> `probes 逐项相同: True`；`样本层: 因 manifest 缺失报错 ✅`。
+
+**六类端点探针**（每类都是样本层覆盖不到的边界）：
+
+| 探针 | 机制期望 | 实测（真 OCR） |
+|---|---|---|
+| `blank_image_yields_no_text_line` | 全空白图 → 非空文本数 = 0 | ✅ 非空文本行=0 |
+| `single_char_is_detected_and_searchable` | 单字符图 → 检出该字符**且可检索到** | ✅ 非空文本行=1，检索命中=True |
+| `long_text_does_not_crash_and_lines_bounded` | 超长文本（24 行长行）→ 不崩且行数有界 | ✅ 状态=indexed，观测行数=24（界 1..200） |
+| `line_bound_predicate_rejects_overflow` | **上界判定自身**的边界自检（给注入以牙齿） | ✅ 对 201 行判 False |
+| `corrupt_image_survives_index_and_search_is_empty` | 坏图 → 索引不崩、检索不崩且无命中 | ✅ 台账行在、状态=ocr_failed、返回 0 |
+| `empty_folder_indexes_cleanly_and_search_is_empty` | 空文件夹 → 索引不崩、库内 0 文件、检索空 | ✅ 扫描 0 / 库内 0 / 命中 0 |
+| `absent_and_tokenless_queries_return_empty` | 无命中查询 / 无 token 查询 → 返回空不崩 | ✅ 均返回 0 |
+
+**工程细节**：探针图在本层自建的**独立临时索引库**上跑（不污染调用方库）；
+OCR 类探针用**桩引擎**做控制流断言（M3 坑 3 的延伸），真 OCR 只留给端到端冒烟；
+报告细节一律用**相对文件名/固定标签**（不含绝对路径或时钟），保证双跑逐项一致。
+
+### 二、门槛标定：分 profile 门槛定案（D-22 ①）
+
+**要解决的问题**（`plan/HANDOFF-M4.md` §二 2 点明）：门槛 0.90 随 manifest 下发，
+实测 char 0.9375 达标、simple 0.8438 **未达标**（D-18 已如实登记）。M4 须**定案**：
+分 profile 设门槛，或保持统一并把 simple 如实标为未达标——**二选一，不许两处口径并存**。
+
+**定标实测（同一 60 图集，真库 + 真 OCR）**：
+
+| profile | OCR 行识别率 | 检索命中率 | 统一门槛判定 | 分 profile 门槛判定 |
+|---|---|---|---|---|
+| `char`（默认） | **0.9545**（严格单条 0.8909） | **0.9375**（30/32，误召回 0） | ✅ 达标 | ✅ 达标（门槛 0.90） |
+| `simple`（主路径） | **0.9545**（严格单条 0.8909） | **0.8438**（27/32，误召回 0） | ❌ **未达标** | ✅ 达标（检索门槛 0.80） |
+
+**关键实测发现（定案依据）**：两 profile 的 **OCR 行识别率完全相同**（0.9545）——
+差异**只在检索侧**。这否证了"simple 整体更弱"的直觉读法：识别质量两者等同，
+差别仅来自分词粒度对**真值查询派生方式**的敏感度。
+
+**simple 的 5 处漏召回逐条归因**（不掩盖）：
+
+| 查询词 | 真值图 | 实得 | 根因 | 是否 profile 特异 |
+|---|---|---|---|---|
+| `优惠券抵` | 3 张 | 0 张 | 真值查询是"优惠券抵扣"的 4 字截断，跨词边界；词级切分为 `优惠券`+`抵扣` | ✅ **profile 特异** |
+| `好的没问` | 3 张 | 0 张 | 同上（"好的没问题"的截断） | ✅ **profile 特异** |
+| `记得带充` | 1 张 | 0 张 | 同上（"记得带充电器"的截断） | ✅ **profile 特异** |
+| `failed` | 4 张 | 3 张 | OCR 把 `failed to bind port 8080` 切框，`img_0058` 该行未入库 | ❌ 两 profile **同源** |
+| `invalid` | 2 张 | 1 张 | 同上（`invalid token at line 42` 的切框影响） | ❌ 两 profile **同源** |
+
+**定案（D-22 ①）**：门槛**按 profile 分设**，落到 manifest 顶层 `thresholds_by_profile`：
+
+```
+"thresholds_by_profile": { "char": {"ocr_line_recall": 0.90, "query_recall": 0.90},
+                           "simple": {"ocr_line_recall": 0.90, "query_recall": 0.80} }
+```
+
+`run_bench` 经 `_effective_thresholds(thr, profile)` 取生效门槛；**未声明该键则退回统一门槛**
+（口径唯一：要么统一、要么分 profile，**不并存两套默认**）。报告新增 `profile` 与
+`effective_thresholds` 两个字段，使"当前生效的是哪一套"在报告里可见。
+
+**为何 0.80 不是"下调凑数"**（三条，逐条可核）：
+1. **差异只在检索侧且根因 profile 特异**：5 处漏召回中 3 处是"真值查询截断切在词中间"——
+   这是**真值派生方式与词级语义的口径错配**（plan/05 §4.1 已声明的派生方式），不是分词质量缺陷；
+   另 2 处（`failed`/`invalid`）是 OCR 切框，**两 profile 同源同受影响**，不构成 profile 间差异。
+2. **OCR 侧门槛不动**：两 profile 的 OCR 门槛都是 0.90，实测同为 0.9545 达标——**没有**为了让谁达标而下调。
+3. **未改任何已入仓真值**（D-18 红线）：`data/synthetic/manifest.json` 的 `lines`/`queries`/`images`
+   **逐字节未变**（见 §五：`gen --check` 实测图片 sha256 全部一致，manifest 仅**新增** `thresholds_by_profile` 键）。
+
+### 三、命令逐条执行与退出码语义（本地等价校验）
+
+| # | 命令 | 实测结果 | 判定 |
+|---|---|---|---|
+| 1 | `index data/synthetic --db smoke/m4/b.db` | 新增 60 / 0 变更；exit 0 | ✅ |
+| 2 | `ocr --db smoke/m4/b.db`（**真 OCR**） | 成功 60 / 失败 0 / 陈旧 0；exit 0；**耗时 220s**（60 图，3.7s/图） | ✅ |
+| 3 | `search "账单" --db smoke/m4/b.db` | **命中 5 条**（img_0001/0022/0027/0055/0059），片段为原文 `本月[账单]已生成`；exit 0 | ✅ |
+| 4 | `bench run --db smoke/m4/b.db --data data/synthetic` | 样本层 **0.9545 / 0.9375** 达标；**规则层 7 项探针全绿**；`passed=True`；exit 0；**耗时 9s** | ✅ **M4 DoD ①/②/⑤** |
+| 5 | `bench run --inject-defect ocr_drop` | exit **1**（样本层识别率跌破门槛） | ✅ 可证伪 |
+| 6 | `bench run --inject-defect search_drop` | exit **1**（样本层命中率跌破门槛） | ✅ 可证伪 |
+| 7 | `bench run --inject-defect rule_blank_always_true` | exit **1**（规则层单字符探针红） | ✅ **规则层可证伪（M4 DoD ④ 扩面）** |
+| 8 | `bench run --inject-defect rule_bound_ignored` | exit **1**（规则层上界自检红） | ✅ 同上 |
+| 9 | 同库双跑 `bench run --json`（两次） | 报告 **逐字节一致**（`diff -q` 0 处差异） | ✅ **M4 DoD ④** |
+| 10 | 报告路径检查 | 不含项目绝对路径、不含临时目录名、不含盘符绝对路径（正则 `[A-Za-z]:[\/]` 0 命中） | ✅ 双跑一致的成因可见 |
+| 11 | 删真值 manifest 后 `run_rule_probes` | 规则层结论**逐项不变**；样本层同时报错 | ✅ **M4 DoD ⑤ 可证伪** |
+| 12 | `index data/synthetic --profile simple` + `ocr` + `bench run`（**真 DLL + 真 OCR**） | 报告 `profile=simple`、`effective_thresholds.query_recall=0.80`；样本层 0.9545/0.8438 **达标**；规则层 7 项全绿；exit 0；OCR 耗时 278s | ✅ **D-22 ① 端到端** |
+| 13 | `bench gen --data data --out data/synthetic` 后 `gen --check` | 再生成一致（60 图 sha256 逐一通过）；exit 0 | ✅ 主集图片未漂移 |
+| 14 | `dedupe --db <dupes库> --out k1.csv` 双跑 | 仍 **6 组**；exit 1；k1/k2 **逐字节一致** | ✅ M2 未回退 |
+| 15 | `tools/update_data_ledger.py` → `--check` | 重建后核验一致；exit 0（双解释器均绿） | ✅ |
+| 16 | `pytest`（3.12 / 3.8，无 DLL） | **146 passed + 2 skipped**（双通道收集数一致） | ✅ |
+| 17 | `pytest`（两通道，指向实测 DLL） | **148 passed**（双通道一致） | ✅ |
+
+### 四、守门变异验证（"弄坏被测行为 → 门必须变红"）
+
+本轮**逐项注入 → 复跑 → 复原 → 复跑**，全部实测（注入用 `/tmp` 备份，不落仓库）：
+
+| # | 变异（改被测行为） | 期望 | 实测 |
+|---|---|---|---|
+| M1 | 规则层里调用 `_resolve_manifest()`（即"偷读 manifest"） | "不读 manifest"门红 | ✅ FAILED |
+| M2 | 规则层报告里拼入 `os.getcwd()`（泄漏绝对路径） | 报告无路径门红 | ✅ FAILED |
+| M3 | 空白判定恒真（`_is_blank_observation` → `True`） | 单字符探针红 | ✅ FAILED |
+| M4 | 行数上界判定被无视（`_within_line_bound` → `True`） | 上界自检 + 注入对侧红 | ✅ FAILED |
+| M5 | `run_bench` 报告塞入 `time.time_ns()`（引入时钟） | 双跑逐项一致门红 | ✅ FAILED |
+| M6 | `_effective_thresholds` 恒返回统一门槛（分 profile 退化） | 分 profile 门槛门红 | ✅ FAILED |
+| M7 | CLI 不输出规则层一节（`if rules:` → `if False:`） | CLI 规则层可见性门红 | ✅ FAILED |
+| M8 | CLI 判定忽略规则层（`report["passed"]` → `report["sample_passed"]`） | 规则层探活门红 | ✅ FAILED |
+| M9 | `run_bench` 不并入规则层（`rules` 键恒空） | 双层可见性门红 | ✅ FAILED |
+| M10 | manifest 不下发 `thresholds_by_profile` | 分 profile 门槛门红 | ✅ FAILED |
+| M11 | OCR 缺席时**冒充可用**（吞掉 `MissingDependency`） | 降级标注门红 | ✅ FAILED |
+| M12 | OCR 缺席时整层判红（`passed` 不筛 `available`） | 降级标注门红 | ✅ FAILED |
+
+> 共 **12 项**变异逐项实测。**其中 M2 与 M3 首轮未红**——据此修正了测试：
+> M2 的原判据只查"本测试的 tmp_path"，注入 `os.getcwd()` 时 tmp_path 根本不出现（**弱判据放行**），
+> 已改为查**绝对路径的形态特征**（盘符正则 + 仓库根 + 层临时目录名）；M3 原打在
+> `test_blank_image_yields_zero_lines`（只查空白探针自身），注入"空白判定恒真"对它**无区分度**，
+> 已改打 `test_single_char_is_detected_and_searchable`（**对侧**探针，才有牙齿）。
+> **这是本轮第三次"看似覆盖、实则空转"的实测纠正**（前两次见 §M2 二 缺陷 1、§M3 二 缺陷 3）。
+> 复原后双解释器全绿，工作区 `git status` 无残留（`grep -rn MUTATION src/ tests/` 0 命中）。
+
+### 五、基准规模与吞吐实测（D-22 ③：定案维持 60）
+
+**实测（本机 3.12，真 OCR）**：
+
+| 规模 | 生成 | 索引 | OCR（真） | 单图耗时 | bench run | 达标 |
+|---|---|---|---|---|---|---|
+| **60**（入仓） | 0.5s | 0.1s | **220s** | 3.7s/图 | 9s | ✅ 0.9545 / 0.9375 |
+| **120**（实测候选） | 0.7s | 0.1s | **302s** | **2.52s/图** | — | ✅ 0.9563 / 0.9143 |
+
+**定案（D-22 ③）：维持 60，不升 120**。理由：
+1. **收益不足以抵偿**：120 图的统计量提升（110→229 行、32→35 查询）未改变任何结论
+   （两规模均达标、口径均一致），而 OCR 耗时从约 3.7 分钟升到约 5 分钟；
+2. **数据资产变动成本**：升规模须**重跑 `bench gen --check`** 并**重建台账**（plan/06 §三 P-5 挂账的纪律），
+   且会让 M1–M3 留档的位级基准数字**全部失效**（60 图 sha256 已入 git）；
+3. **吞吐结论已如实登记**（M3 §八 诚实口径 ④ 的挂账已销）：120 图 302s / 2.52s 每图，
+   说明 OCR 吞吐随规模**线性**（2.52s/图 vs 3.7s/图，后者含首图引擎初始化摊销），无异常放大。
+
+> **如实声明**：120 图实测在 `smoke/scale120`（**不入 git 的一次性工作区**）完成，
+> **未改动** `data/synthetic`；故本轮数据资产**零新增**，`gen --check` 实测仍绿。
+
+### 六、新增/修订的 K 口径与测试面
+
+M0–M3 的 K1–K19 全部仍然有效。M4 **未新增 K 编号**，对 **K14** 做延伸，并新增一条测试面：
+
+| K | M4 处置 | 守门 |
+|---|---|---|
+| K14 | **延伸**：真值只存"输入与期望"——规则驱动层**同样不得读 manifest**（输入由本层自造、期望由机制推出，读了就退化成第二个样本层） | `tests/test_bench_rules.py`（三重证伪） |
+| K13 | 分 profile 门槛随 manifest 下发（数据非代码），生成器须确定性写出该键 | `test_manifest_declares_thresholds_by_profile` + `gen --check` 仍绿 |
+| K16 | 报告新增 `profile`/`effective_thresholds`，生效门槛可见；两口径（主 + 严格单条）继续同报 | `test_run_bench_uses_profile_specific_threshold` |
+
+**新增测试文件**：`tests/test_bench_rules.py`（22 项）——规则层三重证伪 + 六类端点探针 +
+**OCR 缺席只降级 OCR 类探针**（索引/检索侧照跑且具名登记，不冒充已覆盖）+ 报告无路径 +
+分 profile 门槛（选取/回退/端到端）+ 报告双跑逐项一致 + 规则层探活 + CLI 形态。
+
+**M4 加固既有测试一条**：`tests/test_cli_contract.py::test_missing_dependency_is_exit_3`
+——该测试此前**隐含依赖"进程内 OCR 引擎缓存为冷"**，而 M4 的规则层会真加载一次引擎，
+一旦缓存被暖过 import 桩就拦不住（实测：全量跑时红、单跑时绿 = 顺序污染）。
+已显式 `monkeypatch.setattr(ocr, "_ENGINE", None)`，使 exit 3 契约判定**只取决于 import 通路**，
+与执行顺序无关。**这是 M4 暴露并修复的第三个缺陷**（前两个见 §二）。
+
+### 七、不可本机实跑的通路（显式标注）
+
+| 通路 | 为何本机跑不了 | 处置 |
+|---|---|---|
+| CI 三矩阵 | **仍无远端**（`git remote -v` 空），workflow 从未执行 | 结论继续写"本地等价校验（未接远端，CI 待首推验证）"；M6 首推后据实补记 run id |
+| 规则层探针在**真 OCR** 下跨平台的一致性 | 本机只有 Windows（Pillow 版本影响渲染；OCR 引擎行为可能随平台/版本变） | 探针的**机制期望**（空白 0 行、单字符命中、坏图不崩）是引擎无关的语义；但"真引擎是否真给出该语义"**只在 Windows + rapidocr 1.4.4 实测**，跨平台待 CI 复核 |
+| 更大规模（>120 图）的吞吐 | 本机 120 图已 5 分钟，再升无收益且耗时长 | 实测到 120 即止；吞吐线性结论已登记（§五） |
+| 规则层在**并发**调用下的行为 | 本机单进程验证 | 每调用建独立临时库 + `finally` 清理，理论无共享状态；并发下是否仍如此**未实测**（如实登记为缺口） |
+
+### 八、M4 自评
+
+- **已完成**：**规则驱动层落地**（`run_rule_probes`，签名与函数体不含 manifest，三重证伪，
+  六类端点探针，单列进 `bench run` 报告）；**OCR 缺席时只降级 OCR 类探针**（索引/检索侧照跑并具名登记，
+  不冒充已覆盖）；**分 profile 门槛定案**（D-22 ①，落 manifest
+  `thresholds_by_profile`，口径唯一不并存）；**基准规模定案维持 60**（120 图吞吐实测后判定，D-22 ③）；
+  **报告双跑逐字节一致**（含路径/时钟排除，M4 DoD ④）；**规则层可证伪探活**
+  （两种机制破坏注入必红，M4 DoD ④ 扩面）；双解释器 **146+2skip（带 DLL 148）**全绿；
+  **12 项变异**逐项实测（含 M2/M3 两项"首轮未红→修正测试"）；真 OCR 端到端冒烟
+  （60/60、`账单` 5 命中、双层达标）；真 DLL + 真 OCR 的 simple profile 端到端（D-22 ① 验证）；
+  文档同步（plan/00·04·05·06 + README + data/README）+ 台账重建。
+- **未做（留给后续里程碑）**：干净环境/打包验证（M5）；发布（M6）。
+- **诚实口径**：
+  ① CI 仍未跑过（无远端）；② 规则层的"真引擎语义"只在 Windows + rapidocr 1.4.4 实测，
+     跨平台待 CI 复核；③ 规则层并发行为**未实测**（单进程验证）；
+  ④ `simple` 门槛 0.80 是**按词级语义定标**（依据已逐条列明于 §二），
+     但**词级路径的真实召回上限是否就是 0.8438** 只在 60 图合成集上实测——真实截图下
+     该门槛是否合适**未实测**（如实登记为缺口，不做无据声明）。
