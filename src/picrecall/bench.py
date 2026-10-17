@@ -380,10 +380,29 @@ def _load_whitelist(data_dir):
 
 
 def _find_font(size):
+    """字体发现：优先 CJK 字体（白名单是中文，落 DejaVu 会渲染成豆腐块——
+    M6 CI 首推实测：ubuntu 上 DejaVu 无 CJK 字形，识别率 0.21），ASCII 回落同理分平台。
+    发现顺序即优先级；都缺席则回落 Pillow 内建位图字体（Latin 域）。"""
     from PIL import ImageFont
 
-    for name in ("msyh.ttc", "msyh.ttf", "arial.ttf", "DejaVuSans.ttf"):
-        for base in (r"C:\Windows\Fonts", "/usr/share/fonts/truetype/dejavu", "/Library/Fonts"):
+    candidates = [
+        # Windows：微软雅黑优先
+        (r"C:\Windows\Fonts", ("msyh.ttc", "msyh.ttf", "simhei.ttf", "arial.ttf")),
+        # Linux：常见 CJK 字体包（fonts-noto-cjk / fonts-wqy-zenhei / fonts-wqy-microhei）
+        ("/usr/share/fonts", (
+            "truetype/noto/NotoSansCJK-Regular.ttc",
+            "opentype/noto/NotoSansCJK-Regular.ttc",
+            "truetype/wqy/wqy-zenhei.ttc",
+            "truetype/wqy/wqy-microhei.ttc",
+            "truetype/dejavu/DejaVuSans.ttf",
+        )),
+        ("/usr/share/fonts/truetype/dejavu", ("DejaVuSans.ttf",)),
+        # macOS
+        ("/System/Library/Fonts", ("PingFang.ttc", "Hiragino Sans GB.ttc", "Arial.ttf")),
+        ("/Library/Fonts", ("Arial.ttf",)),
+    ]
+    for base, names in candidates:
+        for name in names:
             p = os.path.join(base, name)
             if os.path.isfile(p):
                 try:

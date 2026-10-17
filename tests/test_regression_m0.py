@@ -53,10 +53,19 @@ def test_stored_path_keeps_original_case(tmp_path):
 
 
 def test_path_key_matching_is_case_insensitive(tmp_path):
-    """匹配键大小写不敏感：同一文件不同大小写路径不得重复入库。"""
+    """匹配键大小写不敏感：同一文件不同大小写路径不得重复入库。
+
+    平台边界（M6 CI 首推实测）：该不变量只在**大小写不敏感文件系统**上可构造——
+    Linux 上 `shots` 与 `Shots` 是两个真实不同的目录，改名后路径本就不存在，属另一
+    语义。normcase 匹配键的存储面行为由 `test_stored_path_keeps_original_case`
+    锁住（它不依赖大小写折叠）。
+    """
     folder = tmp_path / "shots"
     folder.mkdir()
     _png(folder, "a.png")
+    if not _fs_is_case_insensitive(tmp_path):
+        import pytest
+        pytest.skip("大小写敏感文件系统（如 Linux ext4）：无'同文件不同大小写'不变量可断言")
     conn = db.connect(str(tmp_path / "i.db"))
     try:
         entries = index.scan_folder(str(folder))
@@ -68,6 +77,16 @@ def test_path_key_matching_is_case_insensitive(tmp_path):
         assert conn.execute("SELECT COUNT(*) AS n FROM files").fetchone()["n"] == 1
     finally:
         conn.close()
+
+
+def _fs_is_case_insensitive(tmp_path):
+    """探测文件系统是否大小写不敏感（真实 touch 对照，不按平台名猜）。"""
+    a = tmp_path / "__caseprobe__"
+    a.write_text("x", encoding="utf-8")
+    try:
+        return os.path.exists(str(a).upper()) and os.path.exists(str(a).lower())
+    finally:
+        a.unlink()
 
 
 def test_synthetic_render_never_clips_text(tmp_path):
