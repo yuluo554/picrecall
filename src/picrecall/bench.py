@@ -694,6 +694,15 @@ def run_bench(conn, data_dir=None, inject_defect=None, thresholds=None, quiet=Fa
     manifest_path = _resolve_manifest(data_dir)
     with open(manifest_path, "r", encoding="utf-8") as fh:
         manifest = json.load(fh)
+    if manifest.get("schema") == "picrecall-dupes/1":
+        # dupes 子集是 dedupe 的真值（门槛只有 phash_max_distance），不含 OCR/检索门槛，
+        # 不是 run_bench 的对账对象。显式报用法错误，不能让它以 KeyError 裸崩
+        # （M6 干净 clone 实测：bench run --data data/synthetic_dupes 崩在门槛读取）。
+        raise ValueError(
+            "该数据目录是近似重复族子集（picrecall-dupes/1），不含 OCR/检索真值门槛，"
+            "不属于 bench run 的对账对象；请对主集跑 bench run（--data data/synthetic）。"
+            "dedupe 的验证请用 index + dedupe 命令。"
+        )
 
     thr = dict(manifest.get("thresholds") or config.BENCH_DEFAULT_THRESHOLDS)
     # 分 profile 门槛（M4，D-22）：manifest 顶层键，与统一门槛同源下发（数据非代码）。

@@ -258,3 +258,36 @@ def test_bench_run_absent_data_dir_is_exit_2_not_traceback(tmp_path, monkeypatch
     combined = captured.out + captured.err
     assert "数据目录不存在" in combined
     assert "Traceback" not in combined
+
+
+def test_bench_run_on_dupes_manifest_is_exit_2_not_keyerror(tmp_path, capsys):
+    """`bench run --data <近似重复族子集>` 是用法错误（exit 2），不得以 KeyError 裸崩。
+
+    M6 干净 clone 实测：dupes manifest（picrecall-dupes/1）的门槛只有
+    phash_max_distance，run_bench 读取 ocr_line_recall 时裸 KeyError + traceback。
+    """
+    from picrecall import bench, db
+
+    repo_data = os.path.join(os.path.dirname(os.path.dirname(
+        os.path.abspath(__file__))), "data")
+    dupes_dir = os.path.join(repo_data, "synthetic_dupes")
+    if not os.path.isfile(os.path.join(dupes_dir, "manifest.json")):
+        pytest.skip("dupes manifest 不在本仓库 data/ 内")
+
+    folder = tmp_path / "shots"
+    folder.mkdir()
+    dbp = str(tmp_path / "x.db")
+    assert _run(["index", str(folder), "--db", dbp]) == config.EXIT_OK
+
+    conn = db.connect(dbp)
+    try:
+        with pytest.raises(ValueError):
+            bench.run_bench(conn, data_dir=dupes_dir)
+    finally:
+        conn.close()
+
+    assert _run(["bench", "run", "--db", dbp, "--data", dupes_dir]) == config.EXIT_USAGE
+    captured = capsys.readouterr()
+    combined = captured.out + captured.err
+    assert "近似重复族子集" in combined
+    assert "Traceback" not in combined

@@ -271,6 +271,10 @@ def cmd_bench_run(args):
             # 更不能裸抛异常（M5 实测：裸 FileNotFoundError 会以 traceback + exit 1 收场）。
             print("错误：%s" % exc, file=sys.stderr)
             return config.EXIT_USAGE
+        except ValueError as exc:
+            # 指向非对账对象的数据目录（如近似重复族子集 manifest，M6）同属用法错误。
+            print("错误：%s" % exc, file=sys.stderr)
+            return config.EXIT_USAGE
     finally:
         conn.close()
 
