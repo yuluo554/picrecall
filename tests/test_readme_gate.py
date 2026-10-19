@@ -23,15 +23,10 @@ PYPROJECT = os.path.join(REPO_ROOT, "pyproject.toml")
 
 
 def _toml_module():
-    """tomllib 是 3.11+ 的 stdlib；3.8 通道回落 tomli（dev extra 已声明）。"""
-    try:
-        import tomllib as _t
+    """tomllib 自 3.11 起进 stdlib；本项目 floor 为 3.12，故直接用它。"""
+    import tomllib as _t
 
-        return _t
-    except ModuleNotFoundError:
-        import tomli as _t
-
-        return _t
+    return _t
 
 
 def _read(path):

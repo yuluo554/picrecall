@@ -34,8 +34,8 @@
 
 ## 安装
 
-**先升 pip**（尤其 Python 3.8）：本项目是 pyproject-only 工程（无 `setup.py`），
-可编辑安装走 PEP 660；而 3.8.8 自带的 pip 20.2.3 不支持它，会直接报
+**先升 pip**：本项目是 pyproject-only 工程（无 `setup.py`），
+可编辑安装走 PEP 660，老版本 pip 不支持它，会直接报
 `editable mode currently requires a setup.py based build`（M5 干净 venv 实测）。
 
 ```bash
@@ -57,8 +57,8 @@ pip install -e ".[dev,ocr]"    # 追加 OCR 引擎（跑 OCR/基准需要）
 > **模型说明**：OCR 模型**随 pip 包自带**（`rapidocr-onnxruntime` wheel 内含 det/rec/cls 三个 onnx，
 > 共约 15MB），**首次运行不需要额外下载**，也不需要 GPU。
 
-**Python 版本**：3.8 及以上。注意 3.8 通道上 `onnxruntime` 上限为 1.19.x（1.20 起不再发布 cp38 轮子），
-`requirements.txt` 与 `pyproject.toml` 已按解释器分档约束。
+**Python 版本**：3.12 及以上。构建侧要求 setuptools >= 77（PEP 639 的 SPDX
+`license` 表达式由该版本引入），pip 会自动在隔离构建环境里装够。
 
 > **安装形态说明（M5 实测）**：以上两种都是**可编辑安装**，`picrecall bench gen` 等命令的
 > 默认数据目录（仓库内的 `data/`）按包路径推导，可编辑安装下能正确定位。
@@ -131,6 +131,7 @@ picrecall index "/path/to/screenshots" --profile simple
 > 逐字兜底路径 **0.9375**（达标）——词级精度更高但召回更低。
 > 故**默认走 `char`**；`simple` 属可选主路径，按需自担取舍。
 > 索引库记录所用 profile，查询时不一致会报错并提示重建（exit 2）。
+> （上段"3.8 / 3.12 双通道"是 M1 当时的实测记录；本项目现 floor 为 3.12。）
 
 主路径不可用时（DLL 缺席或词典不全）程序会**显式报告"未启用 + 原因"**，
 检索自动走 `char` 兜底，不会静默出错。

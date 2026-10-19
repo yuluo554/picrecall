@@ -8,8 +8,8 @@
 | 资产 | 类型 | 来源 | 许可 | sha256 | 大小(B) |
 |---|---|---|---|---|---|
 | `data/whitelist_texts.txt` | 白名单文本集（合成图渲染素材源；假值登记处） | 自制（本项目编写；号码/单号一律假值） | MIT（本项目） | `3a9e1ecdc259252fe243cb4cabdbe1a0df006f1bca0b2b431d59a4169f1e153d` | 1544 |
-| `data/synthetic/manifest.json` | 合成截图集真值 manifest（图→文本→应命中词→版式→指纹） | 生成器产出（picrecall.bench.gen_synthetic，seed=20261016，count=60） | MIT（本项目） | `104dd681e4addbe2871a420f95b55292c1ab7f60288fbbcd9c4b3924512df765` | 31960 |
-| `data/synthetic_dupes/manifest.json` | 近似重复族真值 manifest（dedupe 端到端真样例：族→成员→应同组） | 生成器产出（picrecall.bench.gen_dupes，seed=20261017，count=6 族 × 3 成员） | MIT（本项目） | `4cc52897438dd9630d29c35570a9b9b9c603158e7510a9c8b43ebd4aafb2214c` | 11937 |
+| `data/synthetic/manifest.json` | 合成截图集真值 manifest（图→文本→应命中词→版式→指纹） | 生成器产出（picrecall.bench.gen_synthetic，seed=20261016，count=60） | MIT（本项目） | `6873dd2be6ed0ee5646e891070faafa168a9eea2df9fb7be880cee4fd7c2477e` | 31960 |
+| `data/synthetic_dupes/manifest.json` | 近似重复族真值 manifest（dedupe 端到端真样例：族→成员→应同组） | 生成器产出（picrecall.bench.gen_dupes，seed=20261017，count=6 族 × 3 成员） | MIT（本项目） | `ee5f655fa96e2c8ad5ef292c301047c80ab88d04bbc276f478bb455657f852bd` | 11937 |
 | `data/schema_notes.md` | 索引库 schema 与迁移口径（**只引用不复述** DDL；真源在 db.SCHEMA_SQL） | 手工（据 db.py/__init__.py 实况编写） | MIT（本项目） | `6d5185fa9e98023bce26c26f8ef9ef2ee48d60925441ba78ef735a0e81f2061a` | 8484 |
 | `data/README.md` | 依据查证 + 数据源可获取性 + 合成数据纪律 | 手工（含 gh api 实测记录） | MIT（本项目） | `f50cb17cfec74fa1bc4c7747af16c9a4e24eca197273aa4a90c56581e09bef3e` | 9538 |
 

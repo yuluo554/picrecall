@@ -4,7 +4,7 @@
 纯本地、零上传、可增量维护。
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 SCHEMA_VERSION = "1"
 
 __all__ = ["__version__", "SCHEMA_VERSION"]
